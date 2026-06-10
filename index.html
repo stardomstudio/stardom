@@ -1141,7 +1141,7 @@ function initAdminOverlay(){
   if(sessionStorage.getItem('stardom_admin_auth')==='1'){
     document.getElementById('admin-pw-overlay').style.display='none';
     document.getElementById('admin-main').style.display='block';
-    renderAdminEvaluaciones();renderAdminMonitores();renderAdminDashboard();
+    cargarDatosAdmin();
   } else {
     document.getElementById('admin-pw-overlay').style.display='flex';
     document.getElementById('admin-main').style.display='none';
@@ -1152,11 +1152,79 @@ function checkAdminPw(){
     document.getElementById('admin-pw-overlay').style.display='none';
     document.getElementById('admin-main').style.display='block';
     sessionStorage.setItem('stardom_admin_auth','1');
-    renderAdminEvaluaciones();renderAdminMonitores();renderAdminDashboard();
+    cargarDatosAdmin();
   } else {
     const err=document.getElementById('adminPwError');err.classList.add('show');
     document.getElementById('adminPwInput').value='';
     setTimeout(()=>err.classList.remove('show'),2500);
+  }
+}
+
+// Carga todos los datos del Sheets al entrar al admin
+async function cargarDatosAdmin(){
+  showSpinner('Cargando datos de Google Sheets...');
+  try{
+    // Cargar comprobantes, evaluaciones y monitores en paralelo
+    const [rComp, rEvals, rMons] = await Promise.all([
+      fetch(SCRIPT_URL+'?action=getAllComprobantes'),
+      fetch(SCRIPT_URL+'?action=getEvals'),
+      fetch(SCRIPT_URL+'?action=getMonitores')
+    ]);
+    const dComp  = await rComp.json();
+    const dEvals = await rEvals.json();
+    const dMons  = await rMons.json();
+    if(dComp.status==='ok'  && dComp.data)  DB.comprobantes = dComp.data;
+    if(dEvals.status==='ok' && dEvals.data) DB.evaluaciones = dEvals.data;
+    if(dMons.status==='ok'  && dMons.data)  DB.monitores    = dMons.data;
+    hideSpinner();
+    // Si hay comprobantes, mostrarlos todos
+    if(DB.comprobantes.length > 0){
+      const periodos = getPeriodosUnicos();
+      // Renderizar todos los comprobantes agrupados
+      renderTodosLosComprobantes();
+    }
+    renderAdminEvaluaciones();
+    renderAdminMonitores();
+    renderAdminDashboard();
+  }catch(e){
+    hideSpinner();
+    console.error('Error cargando datos:', e);
+    renderAdminEvaluaciones();
+    renderAdminMonitores();
+    renderAdminDashboard();
+  }
+}
+
+// Renderiza todos los comprobantes del Sheets en la vista admin
+function renderTodosLosComprobantes(){
+  const periodos = getPeriodosUnicos();
+  if(!periodos.length) return;
+  // Agrupar por período
+  const slipsContainer = document.getElementById('admin-slips-container');
+  const titleEl = document.getElementById('admin-results-title');
+  const resultsSection = document.getElementById('admin-results-section');
+  if(!slipsContainer) return;
+  allSlipsData = [];
+  slipsContainer.innerHTML = '';
+  DB.comprobantes.forEach(m => {
+    const slipId = 'slip-'+m.documento+'-'+(m.periodo||'').replace(/[^a-zA-Z0-9]/g,'');
+    const safeName = (m.nombre||'').replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g,'').trim();
+    allSlipsData.push({id:slipId, name:safeName, telefono:m.telefono});
+    slipsContainer.innerHTML += buildSlipHTML(m, slipId, true);
+  });
+  if(titleEl) titleEl.textContent = DB.comprobantes.length+' Comprobantes históricos';
+  if(resultsSection) resultsSection.style.display='block';
+  // Poblar dropdown de períodos
+  const adminPerSel = document.getElementById('admin-periodo-select');
+  if(adminPerSel){
+    adminPerSel.innerHTML = '<option value="">— Todos los períodos —</option>';
+    periodos.forEach((p,i) => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = p + (i===0?' (último)':'');
+      if(i===0) opt.selected = true;
+      adminPerSel.appendChild(opt);
+    });
+    onAdminPeriodoChange();
   }
 }
 function adminTab(tab,btn){
@@ -1613,4 +1681,3 @@ async function generarAnalisisIA(evalData, containerId){
 </script>
 </body>
 </html>
-
