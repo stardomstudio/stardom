@@ -17,7 +17,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
-
+.demo-banner{background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.05));border-bottom:1px solid rgba(201,168,76,.2);padding:8px 20px;text-align:center;font-size:11px;color:var(--gold);letter-spacing:.5px;position:sticky;top:0;z-index:100;}
+.demo-banner span{color:var(--text-muted);}
 .page{display:none;min-height:100vh;padding:28px 20px;}.page.active{display:block;}
 .portal-header{text-align:center;margin-bottom:36px;}
 .portal-header::before{content:'';display:block;width:48px;height:1.5px;background:var(--gold);margin:0 auto 18px;}
@@ -242,8 +243,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .periodo-select-wrap::after{content:'▾';position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--gold);pointer-events:none;font-size:14px;}
 </style>
 </head>
-
-
+<body>
 
 
 <!-- SELECTOR -->
@@ -365,7 +365,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
         <div class="section-label">Identificación del Monitor</div>
         <div class="field-group">
           <label>ID de Monitor</label>
-          <input type="text" id="monitor-id-input" placeholder="Tu ID de monitor"/>
+          <input type="text" id="monitor-id-input" placeholder="ID de monitor"/>
         </div>
         <div class="field-group">
           <label>Contraseña</label>
@@ -456,7 +456,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   <div class="pw-overlay" id="admin-pw-overlay">
     <div class="pw-card">
       <h2>Área Administrativa</h2>
-      <p>Stardom Studio · Solo personal autorizado<br></p>
+      <p>Stardom Studio · Solo personal autorizado</p>
       <div class="field-group" style="margin-bottom:10px;">
         <input type="password" id="adminPwInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkAdminPw()"/>
       </div>
@@ -513,11 +513,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
           </div>
           <div class="field-group">
             <label>Período</label>
-            <input type="text" id="periodoInput" placeholder="Ej: Semana 19-25 Mayo 2026"/>
+            <input type="text" id="periodoInput" placeholder="Ej: Semana 2-8 Jun 2026"/>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button class="btn-primary" id="btnGenerate" onclick="generate()" disabled style="flex:1;">✦ Generar comprobantes</button>
-            <button class="btn-ghost" style="display:none;">—</button>
           </div>
           <div class="status" id="admin-nomina-status"></div>
         </div>
@@ -601,22 +600,29 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 
 <script>
 // ══════════════════════════════════════════════════
-// CONFIGURACIÓN — CAMBIA SOLO ESTA URL
+// CONFIGURACIÓN GOOGLE SHEETS
+// Deja vacío para usar datos demo, pega tu URL para conectar a Sheets
 // ══════════════════════════════════════════════════
-const SCRIPT_URL = ''; // ← Pega aquí la URL de tu Google Apps Script
+const SCRIPT_URL = ''; // ← cuando tengas el Apps Script, pega la URL aquí
 
+// ══════════════════════════════════════════════════
+// BASE DE DATOS DEMO (se usa cuando SCRIPT_URL está vacío)
+// ══════════════════════════════════════════════════
+const DB = {
+  comprobantes: [],
+  evaluaciones: [],
+  monitores: [],
+};
 
-
-let sessionEvals = [];       // evaluaciones guardadas en esta sesión (espejo local)
-let sessionMonitores = [];   // monitores registrados en esta sesión (espejo local)
-const ADMIN_PASSWORD = 'stardom2026'; // ← cambia aquí tu contraseña de admin
+let sessionEvals = [];
+let sessionMonitores = [];
+const ADMIN_PASSWORD = 'stardom2026';
 let monitorSession = null;
 let allSlipsData = [];
 let data1 = null, data2 = null;
+// Para eval monitor
 let monitorPeriodoActual = '';
 let monitorModeloActual = null;
-let DB = { comprobantes: [], evaluaciones: [], monitores: [] }; // se llena desde Sheets
-
 
 // ── Helpers ──
 function fmtCOP(v){const n=parseFloat(v);if(!n||isNaN(n))return'—';return'$'+n.toLocaleString('es-CO',{minimumFractionDigits:0,maximumFractionDigits:0});}
@@ -630,7 +636,7 @@ function goProfile(p){
 function showSpinner(msg){document.getElementById('spinnerMsg').textContent=msg||'...';document.getElementById('spinnerOverlay').classList.add('show');}
 function hideSpinner(){document.getElementById('spinnerOverlay').classList.remove('show');}
 function setStatus(id,msg,type){const el=document.getElementById(id);if(!el)return;el.textContent=msg;el.className='status '+type;}
-function apiUrl(params=''){return SCRIPT_URL+(params?'?'+params:'');}
+function fakeDelay(ms=600){return new Promise(r=>setTimeout(r,ms));}
 function calcStarStatus(score){
   if(score>=90)return{label:'Elite',cls:'elite'};
   if(score>=80)return{label:'Excelente',cls:'excelente'};
@@ -638,10 +644,10 @@ function calcStarStatus(score){
   if(score>=60)return{label:'Requiere mejora',cls:'mejora'};
   return{label:'Riesgo',cls:'riesgo'};
 }
-// Obtiene lista de períodos únicos (más reciente primero según orden de carga)
+// Obtiene lista de períodos únicos ordenados (el más reciente primero)
 function getPeriodosUnicos(){
   const set = new Set(DB.comprobantes.map(d=>d.periodo));
-  return [...set];
+  return [...set]; // el orden del array original ya es más reciente primero
 }
 
 // ══════════════════════════════════════════════════
@@ -652,30 +658,33 @@ let modeloDataAll=[], modeloEvals=[];
 async function modeloBuscar(){
   const cedula = document.getElementById('modelo-cedula').value.trim();
   if(!cedula){setStatus('modelo-status','Escribe tu número de cédula','error');return;}
-  if(!SCRIPT_URL){setStatus('modelo-status','⚠ La URL de Apps Script no está configurada. Contacta al administrador.','error');return;}
   showSpinner('Buscando tu información...');
-  try{
-    const r = await fetch(apiUrl('cedula='+encodeURIComponent(cedula)));
-    const d = await r.json();
+  let data, evals;
+  if(SCRIPT_URL){
+    // Modo producción: buscar en Google Sheets
+    try{
+      const r = await fetch(SCRIPT_URL+'?cedula='+encodeURIComponent(cedula));
+      const d = await r.json();
+      hideSpinner();
+      if(d.status!=='ok'){setStatus('modelo-status',d.msg||'No se encontraron registros.','error');return;}
+      data  = d.data  || [];
+      evals = [...(d.evals||[]), ...sessionEvals.filter(e=>String(e.cedula)===cedula)];
+    }catch(e){hideSpinner();setStatus('modelo-status','Error de conexión. Verifica tu internet.','error');return;}
+  } else {
+    // Modo demo: buscar en datos locales
+    await fakeDelay();
     hideSpinner();
-    if(d.status!=='ok'){setStatus('modelo-status',d.msg||'No se encontraron registros para ese documento.','error');return;}
-    const data  = d.data  || [];
-    const evals = [...(d.evals||[]), ...sessionEvals.filter(e=>String(e.cedula)===cedula)];
-    if(!data.length && !evals.length){setStatus('modelo-status','No se encontraron registros para ese documento.','error');return;}
-    // Sync local DB mirror
-    data.forEach(m=>{ if(!DB.comprobantes.find(c=>c.documento===m.documento&&c.periodo===m.periodo)) DB.comprobantes.push(m); });
-    evals.forEach(e=>{ if(!DB.evaluaciones.find(ev=>ev.cedula===e.cedula&&ev.periodo===e.periodo)) DB.evaluaciones.push(e); });
-    modeloDataAll=data; modeloEvals=evals;
-    document.getElementById('modelo-login').style.display='none';
-    document.getElementById('modelo-results').style.display='block';
-    const nombre = data[0]?.nombre || 'Modelo';
-    document.getElementById('modelo-nombre-title').textContent = nombre.split(' ').slice(0,2).join(' ');
-    renderModeloComprobantes(data);
-    renderStarDashboard(evals);
-  }catch(e){
-    hideSpinner();
-    setStatus('modelo-status','Error de conexión. Verifica tu internet.','error');
+    data  = DB.comprobantes.filter(d=>String(d.documento)===cedula);
+    evals = [...DB.evaluaciones,...sessionEvals].filter(e=>String(e.cedula)===cedula);
   }
+  if(!data.length && !evals.length){setStatus('modelo-status','No se encontraron registros para ese documento. Verifica tu número de cédula.','error');return;}
+  modeloDataAll=data; modeloEvals=evals;
+  document.getElementById('modelo-login').style.display='none';
+  document.getElementById('modelo-results').style.display='block';
+  const nombre = data[0]?.nombre || 'Modelo';
+  document.getElementById('modelo-nombre-title').textContent = nombre.split(' ').slice(0,2).join(' ');
+  renderModeloComprobantes(data);
+  renderStarDashboard(evals);
 }
 function modeloLogout(){
   document.getElementById('modelo-login').style.display='block';
@@ -795,16 +804,15 @@ function guardarObservacion(slipId, obsId, savedId){
   const comp = DB.comprobantes.find(c=>String(c.documento)===doc && c.periodo===periodo);
   if(comp) comp.observaciones = texto;
   const savedEl = document.getElementById(savedId);
-  savedEl.textContent='Guardando...'; savedEl.style.display='inline';
-  // Guardar en Sheets
+  savedEl.style.display='inline';
   if(SCRIPT_URL){
     fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'saveObservacion',documento:doc,periodo,observaciones:texto})})
-      .then(r=>r.json())
-      .then(d=>{ savedEl.textContent = d.status==='ok' ? '✓ Guardado en Sheets' : '✓ Guardado local'; setTimeout(()=>{ savedEl.style.display='none'; },2500); })
-      .catch(()=>{ savedEl.textContent='✓ Guardado local'; setTimeout(()=>{ savedEl.style.display='none'; },2500); });
+      .then(r=>r.json()).then(d=>{ savedEl.textContent=d.status==='ok'?'✓ Guardado':'✓ Local'; setTimeout(()=>{savedEl.style.display='none';savedEl.textContent='✓ Guardado';},2500); })
+      .catch(()=>{ setTimeout(()=>{savedEl.style.display='none';},2500); });
   } else {
-    savedEl.textContent='✓ Guardado'; setTimeout(()=>{ savedEl.style.display='none'; },2500);
+    setTimeout(()=>{ savedEl.style.display='none'; },2500);
   }
+  // Si el modelo está logueado y viendo ese período, refrescar su comprobante
   if(modeloDataAll.length && modeloDataAll.some(m=>m.documento===doc && m.periodo===periodo)){
     const idx=modeloDataAll.findIndex(m=>m.documento===doc && m.periodo===periodo);
     if(idx>=0) modeloDataAll[idx].observaciones=texto;
@@ -888,26 +896,34 @@ async function monitorLogin(){
   const id=document.getElementById('monitor-id-input').value.trim().toUpperCase();
   const pw=document.getElementById('monitor-pw-input').value.trim();
   if(!id||!pw){setStatus('monitor-login-status','Completa todos los campos','error');return;}
-  if(!SCRIPT_URL){setStatus('monitor-login-status','URL de Apps Script no configurada','error');return;}
   showSpinner('Verificando...');
-  try{
-    const r=await fetch(apiUrl('action=monitorLogin&monitorId='+encodeURIComponent(id)+'&pw='+encodeURIComponent(pw)));
-    const d=await r.json();
-    hideSpinner();
-    if(d.status!=='ok'){setStatus('monitor-login-status',d.msg||'ID o contraseña incorrectos','error');return;}
-    const monitor={monitor_id:d.monitorId,nombre:d.nombre,password:pw};
-    monitorSession={id:monitor.monitor_id,nombre:monitor.nombre};
-    document.getElementById('monitor-login').style.display='none';
-    document.getElementById('monitor-panel').style.display='block';
-    document.getElementById('monitor-welcome').textContent='Monitor: '+monitor.nombre+' ('+monitor.monitor_id+')';
-    // Resetear tabs
-    document.querySelectorAll('#monitor-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('#monitor-panel .tab-panel').forEach(p=>p.classList.remove('active'));
-    document.querySelector('#monitor-tabs .tab-btn').classList.add('active');
-    document.getElementById('tab-mon-evaluar').classList.add('active');
-    poblarSelectPeriodosMonitor();
-    loadMonitorHistorial();
-  }catch(e){ hideSpinner(); setStatus('monitor-login-status','Error de conexión. Verifica tu internet.','error'); }
+  let monitor;
+  if(SCRIPT_URL){
+    try{
+      const r=await fetch(SCRIPT_URL+'?action=monitorLogin&monitorId='+encodeURIComponent(id)+'&pw='+encodeURIComponent(pw));
+      const d=await r.json();
+      hideSpinner();
+      if(d.status!=='ok'){setStatus('monitor-login-status',d.msg||'ID o contraseña incorrectos','error');return;}
+      monitor={monitor_id:d.monitorId,nombre:d.nombre,password:pw};
+    }catch(e){hideSpinner();setStatus('monitor-login-status','Error de conexión.','error');return;}
+  } else {
+    await fakeDelay(500);hideSpinner();
+    const allMon=[...DB.monitores,...sessionMonitores];
+    monitor=allMon.find(m=>m.monitor_id===id&&m.password.toLowerCase()===pw.toLowerCase());
+    if(!monitor){setStatus('monitor-login-status','ID o contraseña incorrectos','error');return;}
+  }
+  monitorSession={id:monitor.monitor_id,nombre:monitor.nombre};
+  document.getElementById('monitor-login').style.display='none';
+  document.getElementById('monitor-panel').style.display='block';
+  document.getElementById('monitor-welcome').textContent='Monitor: '+monitor.nombre+' ('+monitor.monitor_id+')';
+  // Resetear tabs
+  document.querySelectorAll('#monitor-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#monitor-panel .tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector('#monitor-tabs .tab-btn').classList.add('active');
+  document.getElementById('tab-mon-evaluar').classList.add('active');
+  // Poblar dropdown de períodos con los períodos que tienen comprobantes
+  poblarSelectPeriodosMonitor();
+  loadMonitorHistorial();
 }
 function monitorLogout(){
   monitorSession=null;
@@ -1039,24 +1055,16 @@ async function guardarEvaluacion(){
     if(!el||el.value===''){setStatus('monitor-eval-status','Completa todos los criterios','error');return;}
     scores[cr.id]=parseFloat(el.value);total+=scores[cr.id];
   }
+  showSpinner('Guardando...');await fakeDelay(700);hideSpinner();
   const nueva={fecha:new Date().toLocaleDateString('es-CO'),periodo,cedula,monitor_id:monitorSession.id,monitor_nombre:monitorSession.nombre,puntaje_total:total,...scores,
     fortalezas:document.getElementById('eval-fortalezas').value.trim(),
     mejoras:document.getElementById('eval-mejoras').value.trim(),
     plan:document.getElementById('eval-plan').value.trim()};
-  showSpinner('Guardando evaluación...');
-  try{
-    const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'saveEval',...nueva})});
-    const d=await r.json();
-    hideSpinner();
-    if(d.status!=='ok'){setStatus('monitor-eval-status','Error al guardar: '+(d.msg||''),'error');return;}
-  }catch(e){hideSpinner();setStatus('monitor-eval-status','Error de conexión al guardar','error');return;}
-  // Espejo local
+  // Si ya existía evaluación de este monitor para este período/cédula, reemplazar en sessionEvals
   const idx=sessionEvals.findIndex(e=>e.cedula===cedula&&e.periodo===periodo);
   if(idx>=0) sessionEvals[idx]=nueva; else sessionEvals.push(nueva);
-  // También actualizar mirror DB.evaluaciones
-  const idxDB=DB.evaluaciones.findIndex(e=>e.cedula===cedula&&e.periodo===periodo);
-  if(idxDB>=0) DB.evaluaciones[idxDB]=nueva; else DB.evaluaciones.push(nueva);
-  setStatus('monitor-eval-status','✓ Evaluación guardada en Google Sheets · '+total+' pts · '+calcStarStatus(total).label,'success');
+  setStatus('monitor-eval-status',`✓ Evaluación guardada · ${total} pts · ${calcStarStatus(total).label}`,'success');
+  // Refrescar lista de modelos
   onMonitorPeriodoChange();
   renderAdminEvaluaciones();renderAdminDashboard();
 }
@@ -1133,7 +1141,7 @@ function initAdminOverlay(){
   if(sessionStorage.getItem('stardom_admin_auth')==='1'){
     document.getElementById('admin-pw-overlay').style.display='none';
     document.getElementById('admin-main').style.display='block';
-    cargarDatosAdmin();
+    renderAdminEvaluaciones();renderAdminMonitores();renderAdminDashboard();
   } else {
     document.getElementById('admin-pw-overlay').style.display='flex';
     document.getElementById('admin-main').style.display='none';
@@ -1144,29 +1152,12 @@ function checkAdminPw(){
     document.getElementById('admin-pw-overlay').style.display='none';
     document.getElementById('admin-main').style.display='block';
     sessionStorage.setItem('stardom_admin_auth','1');
-    cargarDatosAdmin();
+    renderAdminEvaluaciones();renderAdminMonitores();renderAdminDashboard();
   } else {
     const err=document.getElementById('adminPwError');err.classList.add('show');
     document.getElementById('adminPwInput').value='';
     setTimeout(()=>err.classList.remove('show'),2500);
   }
-}
-async function cargarDatosAdmin(){
-  if(!SCRIPT_URL){ renderAdminEvaluaciones(); renderAdminMonitores(); renderAdminDashboard(); return; }
-  showSpinner('Cargando datos...');
-  try{
-    // Cargar evaluaciones y monitores en paralelo
-    const [rEvals, rMons] = await Promise.all([
-      fetch(apiUrl('action=getEvals')),
-      fetch(apiUrl('action=getMonitores'))
-    ]);
-    const dEvals = await rEvals.json();
-    const dMons  = await rMons.json();
-    if(dEvals.status==='ok' && dEvals.data) DB.evaluaciones = [...dEvals.data, ...sessionEvals];
-    if(dMons.status==='ok'  && dMons.data)  DB.monitores    = [...dMons.data, ...sessionMonitores];
-  }catch(e){ console.warn('Error cargando datos admin:', e); }
-  hideSpinner();
-  renderAdminEvaluaciones(); renderAdminMonitores(); renderAdminDashboard();
 }
 function adminTab(tab,btn){
   document.querySelectorAll('#admin-main-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
@@ -1249,21 +1240,16 @@ function generate(){
       plataformas:nicks.map(nr=>({plat:fmt(getVal(nr,'Sede')),nick:fmt(getVal(nr,'Modelo')),usd:parseFloat(getVal(nr,'Tokens'))||0}))
     };
   }).filter(Boolean);
-  renderSlipsGrid(modelos, periodo);
-  // Guardar en Google Sheets
-  if(SCRIPT_URL){
-    showSpinner('Guardando en Google Sheets...');
-    fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'save',periodo,modelos})})
-      .then(r=>r.json())
-      .then(d=>{
-        hideSpinner();
-        if(d.status==='ok') setStatus('admin-nomina-status','✓ '+modelos.length+' comprobantes generados y guardados en Google Sheets.','success');
-        else setStatus('admin-nomina-status','Generados pero error al guardar: '+(d.msg||''),'error');
-      }).catch(()=>{ hideSpinner(); setStatus('admin-nomina-status','Generados. Sin conexión a Sheets.','error'); });
-  }
+  renderSlipsGrid(modelos,periodo);
 }
 
-// loadDemoSlips no disponible en versión de producción
+function loadDemoSlips(){
+  // sin datos demo
+  const modelos=DB.comprobantes.filter(d=>d.periodo===periodo);
+  renderSlipsGrid(modelos,periodo);
+  document.getElementById('periodoInput').value=periodo;
+  setStatus('admin-nomina-status','✓ Datos de demo cargados correctamente.','success');
+}
 
 function renderSlipsGrid(modelos, periodo){
   allSlipsData = [];
@@ -1455,23 +1441,22 @@ function toggleMEC(uid){
 }
 
 // ── Monitores admin ──
-function registrarMonitor(){
+async function registrarMonitor(){
   const id=document.getElementById('nuevo-monitor-id').value.trim().toUpperCase();
   const nombre=document.getElementById('nuevo-monitor-nombre').value.trim();
   const pw=document.getElementById('nuevo-monitor-pw').value.trim();
   if(!id||!nombre||!pw){setStatus('admin-monitor-status','Completa todos los campos','error');return;}
   const allMon=[...DB.monitores,...sessionMonitores];
   if(allMon.some(m=>m.monitor_id===id)){setStatus('admin-monitor-status','Ya existe un monitor con ese ID','error');return;}
-  showSpinner('Registrando monitor...');
-  try{
-    const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'saveMonitor',monitorId:id,nombre,password:pw})});
-    const d=await r.json();
-    hideSpinner();
-    if(d.status!=='ok'){setStatus('admin-monitor-status','Error: '+(d.msg||''),'error');return;}
-  }catch(e){hideSpinner();setStatus('admin-monitor-status','Error de conexión','error');return;}
+  if(SCRIPT_URL){
+    try{
+      const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'saveMonitor',monitorId:id,nombre,password:pw})});
+      const d=await r.json();
+      if(d.status!=='ok'){setStatus('admin-monitor-status','Error: '+(d.msg||''),'error');return;}
+    }catch(e){setStatus('admin-monitor-status','Error de conexión','error');return;}
+  }
   sessionMonitores.push({fecha:new Date().toLocaleDateString('es-CO'),monitor_id:id,nombre,password:pw});
-  DB.monitores.push({fecha:new Date().toLocaleDateString('es-CO'),monitor_id:id,nombre,password:pw});
-  setStatus('admin-monitor-status','✓ Monitor registrado en Google Sheets','success');
+  setStatus('admin-monitor-status',SCRIPT_URL?'✓ Monitor registrado en Google Sheets':'✓ Monitor registrado (demo)','success');
   document.getElementById('nuevo-monitor-id').value='';document.getElementById('nuevo-monitor-nombre').value='';document.getElementById('nuevo-monitor-pw').value='';
   renderAdminMonitores();
 }
