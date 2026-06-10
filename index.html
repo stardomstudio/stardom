@@ -647,7 +647,26 @@ function calcStarStatus(score){
 // Obtiene lista de períodos únicos ordenados (el más reciente primero)
 function getPeriodosUnicos(){
   const set = new Set(DB.comprobantes.map(d=>d.periodo));
-  return [...set]; // el orden del array original ya es más reciente primero
+  const periodos = [...set];
+  // Ordenar por fecha: extraer la fecha de inicio del período y ordenar de más reciente a más antiguo
+  periodos.sort(function(a, b){
+    // Intentar extraer fecha del string (formato: YYYY-MM-DD o texto)
+    const fechaA = extraerFechaPeriodo(a);
+    const fechaB = extraerFechaPeriodo(b);
+    return fechaB - fechaA; // más reciente primero
+  });
+  return periodos;
+}
+
+function extraerFechaPeriodo(periodo){
+  if(!periodo) return new Date(0);
+  // Buscar patrón YYYY-MM-DD
+  const match = String(periodo).match(/(\d{4}-\d{2}-\d{2})/);
+  if(match) return new Date(match[1]);
+  // Buscar patrón DD-MM-YYYY o similares
+  const match2 = String(periodo).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(match2) return new Date(match2[3]+'-'+match2[2].padStart(2,'0')+'-'+match2[1].padStart(2,'0'));
+  return new Date(0);
 }
 
 // ══════════════════════════════════════════════════
@@ -1681,3 +1700,4 @@ async function generarAnalisisIA(evalData, containerId){
 </script>
 </body>
 </html>
+
