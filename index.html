@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stardom Studio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
+:root{
+  --bg:#0f0e0c;--surface:#1a1815;--surface2:#232119;
+  --border:#2e2b24;--gold:#c9a84c;--gold-light:#e8c97a;--gold-dim:#7a6330;--gold-faint:rgba(201,168,76,.08);
+  --text:#f0ece3;--text-muted:#8a8070;--text-dim:#5a5448;
+  --red:#e05252;--green:#6fcf97;--blue:#7eb8d4;
+  --radius:12px;--radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+
+.page{display:none;min-height:100vh;padding:28px 20px;}.page.active{display:block;}
+.portal-header{text-align:center;margin-bottom:36px;}
+.portal-header::before{content:'';display:block;width:48px;height:1.5px;background:var(--gold);margin:0 auto 18px;}
+.portal-title{font-family:'DM Serif Display',serif;font-size:clamp(24px,5vw,36px);color:var(--gold-light);margin-bottom:5px;}
+.portal-sub{font-size:12px;color:var(--text-muted);letter-spacing:.5px;}
+.badge{display:inline-block;background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.2);border-radius:20px;font-size:10px;padding:3px 10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+#page-select{background:var(--bg);}
+.select-wrap{max-width:460px;margin:0 auto;padding-top:8vh;}
+.select-wrap .portal-header{margin-bottom:44px;}
+.profiles-grid{display:grid;gap:12px;}
+.profile-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;cursor:pointer;transition:all .25s;display:flex;align-items:center;gap:16px;}
+.profile-card:hover{border-color:var(--gold-dim);transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.4);}
+.profile-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.profile-icon.gold{background:rgba(201,168,76,.12);}.profile-icon.blue{background:rgba(126,184,212,.1);}.profile-icon.red{background:rgba(224,82,82,.1);}
+.profile-info{flex:1;}
+.profile-name{font-family:'DM Serif Display',serif;font-size:15px;color:var(--text);margin-bottom:2px;}
+.profile-desc{font-size:11px;color:var(--text-muted);}
+.profile-arrow{color:var(--text-dim);font-size:16px;}.profile-card:hover .profile-arrow{color:var(--gold);}
+.creds-hint{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-top:20px;font-size:11px;}
+.creds-hint .ch-title{color:var(--gold);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+.creds-hint table{width:100%;border-collapse:collapse;}
+.creds-hint td{padding:3px 0;color:var(--text-muted);}.creds-hint td:first-child{color:var(--text);width:40%;}
+.creds-hint td strong{color:var(--gold-light);}
+.inner{max-width:560px;margin:0 auto;}.inner.wide{max-width:1100px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;}.card+.card{margin-top:14px;}
+.section-label{font-size:10px;font-weight:600;color:var(--gold-dim);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.field-group{position:relative;margin-bottom:11px;}
+.field-group input,.field-group select,.field-group textarea{width:100%;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:12px 15px;font-size:15px;font-family:'DM Sans',sans-serif;transition:border-color .2s;}
+.field-group input:focus,.field-group select:focus,.field-group textarea:focus{outline:none;border-color:var(--gold-dim);}
+.field-group input::placeholder{font-size:13px;color:var(--text-dim);}
+.field-group label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;}
+.field-group textarea{resize:vertical;min-height:72px;font-size:13px;line-height:1.6;}
+.field-group select{appearance:none;cursor:pointer;}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+@media(max-width:480px){.input-row{grid-template-columns:1fr;}}
+.btn-primary{width:100%;padding:13px;background:linear-gradient(135deg,var(--gold),var(--gold-dim));color:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;border:none;border-radius:10px;cursor:pointer;transition:all .2s;}
+.btn-primary:hover{filter:brightness(1.1);}.btn-primary:disabled{opacity:.3;cursor:not-allowed;}
+.btn-ghost{padding:6px 13px;background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.btn-ghost:hover{border-color:var(--gold-dim);color:var(--gold);}
+.btn-back{display:flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:18px;}
+.btn-back:hover{color:var(--gold);}
+.btn-sm{padding:4px 11px;background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.btn-sm:hover{border-color:var(--gold-dim);color:var(--gold);}
+.btn-sm.dl{border-color:rgba(201,168,76,.3);color:var(--gold);}
+.btn-sm.wa{border-color:rgba(37,211,102,.3);color:#25d366;}
+.status{padding:10px 13px;border-radius:var(--radius-sm);font-size:12px;margin:10px 0;display:none;}
+.status.error{background:rgba(224,82,82,.1);color:var(--red);border:1px solid rgba(224,82,82,.25);display:block;}
+.status.success{background:rgba(111,207,151,.08);color:var(--green);border:1px solid rgba(111,207,151,.2);display:block;}
+.status.info{background:var(--gold-faint);color:var(--gold);border:1px solid rgba(201,168,76,.18);display:block;}
+.spinner-overlay{display:none;position:fixed;inset:0;background:rgba(15,14,12,.88);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+.spinner-overlay.show{display:flex;}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spinner-msg{color:var(--gold);font-size:13px;}
+.pw-overlay{position:fixed;inset:0;background:var(--bg);z-index:8888;display:flex;align-items:center;justify-content:center;padding:20px;}
+.pw-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:38px 30px;text-align:center;width:100%;max-width:360px;}
+.pw-card::before{content:'';display:block;width:40px;height:1.5px;background:var(--gold);margin:0 auto 18px;}
+.pw-card h2{font-family:'DM Serif Display',serif;font-size:21px;color:var(--gold-light);margin-bottom:5px;}
+.pw-card p{font-size:12px;color:var(--text-muted);margin-bottom:20px;}
+.pw-error{font-size:11px;color:var(--red);margin-top:8px;display:none;}.pw-error.show{display:block;}
+.tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+.tab-btn{padding:6px 15px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:12px;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;}
+.tab-btn.active,.tab-btn:hover{background:var(--surface2);border-color:var(--gold-dim);color:var(--gold-light);}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+
+/* ── COMPROBANTE (antes: desprendible) ── */
+.slip{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;}
+.slip-header-inner{background:linear-gradient(135deg,#1e1b14,#2a2619);border-bottom:1px solid var(--border);padding:15px 19px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.slip-company{font-size:9px;font-weight:600;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;}
+.slip-name{font-family:'DM Serif Display',serif;font-size:15px;color:var(--text);}
+.slip-doc{font-size:10px;color:var(--text-muted);margin-top:2px;}
+.slip-period .lbl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;}
+.slip-period .val{font-size:12px;color:var(--gold-light);font-weight:500;margin-top:2px;text-align:right;}
+.slip-body{padding:13px 17px 15px;}
+.plat-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px;}
+.plat-table th{text-align:left;color:var(--text-muted);font-size:10px;font-weight:600;padding:3px 5px;border-bottom:1px solid var(--border);}
+.plat-table td{padding:4px 5px;color:var(--text);border-bottom:1px solid rgba(46,43,36,.4);}
+.plat-table tr:last-child td{border-bottom:none;}
+.plat-badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.2);}
+.totals-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;margin-top:10px;}
+.t-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;}
+.t-row .lbl{color:var(--text-muted);}.t-row .val{color:var(--text);font-weight:500;}
+.t-row.deduct .val{color:var(--red);}
+.t-row.hl{border-top:1px solid var(--border);margin-top:6px;padding-top:8px;}
+.t-row.hl .lbl{font-family:'DM Serif Display',serif;font-size:13px;}
+.t-row.hl .val{font-family:'DM Serif Display',serif;font-size:16px;color:var(--gold-light);}
+.slip-footer{border-top:1px solid var(--border);padding:9px 17px;background:rgba(0,0,0,.15);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.slip-footer .bank-info{font-size:11px;color:var(--text-muted);}
+.slip-footer .bank-info strong{color:var(--text);display:block;font-size:12px;margin-bottom:1px;}
+.footer-btns{display:flex;gap:7px;}
+/* Observaciones en comprobante admin */
+.obs-area{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-top:10px;}
+.obs-label{font-size:9px;font-weight:600;color:var(--gold-dim);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:5px;}
+.obs-input{width:100%;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;resize:none;line-height:1.5;outline:none;min-height:48px;}
+.obs-input::placeholder{color:var(--text-dim);}
+.obs-save-btn{margin-top:6px;padding:4px 12px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.25);color:var(--gold);border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.obs-save-btn:hover{background:rgba(201,168,76,.2);}
+.obs-saved{font-size:10px;color:var(--green);margin-left:8px;display:none;}
+
+/* ── STAR ── */
+.star-score-ring{text-align:center;padding:22px 0;}
+.score-number{font-family:'DM Serif Display',serif;font-size:62px;color:var(--gold-light);line-height:1;}
+.score-label{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-top:5px;}
+.score-status{display:inline-block;padding:4px 13px;border-radius:20px;font-size:11px;font-weight:600;margin-top:9px;border:1px solid;}
+.score-status.elite{color:#ffd700;border-color:rgba(255,215,0,.3);background:rgba(255,215,0,.08);}
+.score-status.excelente{color:var(--gold-light);border-color:rgba(201,168,76,.3);background:var(--gold-faint);}
+.score-status.bueno{color:var(--green);border-color:rgba(111,207,151,.3);background:rgba(111,207,151,.06);}
+.score-status.mejora{color:#ffb74d;border-color:rgba(255,183,77,.3);background:rgba(255,183,77,.06);}
+.score-status.riesgo{color:var(--red);border-color:rgba(224,82,82,.3);background:rgba(224,82,82,.06);}
+.evo-badge{display:inline-block;padding:4px 13px;border-radius:20px;font-size:12px;font-weight:600;margin-top:7px;}
+.evo-badge.up{color:var(--green);background:rgba(111,207,151,.08);border:1px solid rgba(111,207,151,.2);}
+.evo-badge.stable{color:var(--text-muted);background:rgba(255,255,255,.04);border:1px solid var(--border);}
+.evo-badge.down{color:var(--red);background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.2);}
+.bar-item{margin-bottom:13px;}
+.bar-top{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;}
+.bar-top .bar-name{color:var(--text-muted);}.bar-top .bar-pts{color:var(--gold);}
+.bar-track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:3px;transition:width .7s ease;}
+.hist-table{width:100%;border-collapse:collapse;font-size:12px;}
+.hist-table th{text-align:left;color:var(--text-muted);font-size:10px;font-weight:600;padding:5px 8px;border-bottom:1px solid var(--border);}
+.hist-table td{padding:6px 8px;border-bottom:1px solid rgba(46,43,36,.4);}
+.hist-table tr:last-child td{border-bottom:none;}
+.hist-table td:last-child{text-align:right;font-weight:500;color:var(--gold-light);}
+.trend-dots{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:9px;}
+.trend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.trend-dot.current{background:var(--gold);}.trend-dot.old{background:var(--text-dim);}
+
+/* ── EVAL CRITERIA ── */
+.eval-score-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+.eval-score-row:last-child{border-bottom:none;}
+.eval-criterion{font-size:13px;color:var(--text);}
+.eval-criterion span{font-size:11px;color:var(--text-muted);display:block;margin-top:2px;}
+.eval-select{padding:6px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;}
+.eval-select:focus{outline:none;border-color:var(--gold-dim);}
+.score-preview{font-family:'DM Serif Display',serif;font-size:38px;color:var(--gold-light);text-align:center;margin:12px 0;}
+.score-preview span{font-size:14px;color:var(--text-muted);}
+
+/* ── MONITOR: lista de modelos por período ── */
+.modelo-eval-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--radius-sm);margin-bottom:7px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);transition:all .2s;}
+.modelo-eval-item:hover{border-color:var(--gold-dim);}
+.modelo-eval-item.evaluada{border-color:rgba(111,207,151,.3);background:rgba(111,207,151,.05);}
+.modelo-eval-item.pendiente{border-color:rgba(224,82,82,.25);background:rgba(224,82,82,.04);}
+.mei-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.mei-dot.verde{background:var(--green);}
+.mei-dot.rojo{background:var(--red);}
+.mei-info{flex:1;}
+.mei-nombre{font-size:13px;color:var(--text);font-weight:500;}
+.mei-sub{font-size:11px;color:var(--text-muted);}
+.mei-badge{font-size:10px;padding:2px 9px;border-radius:10px;font-weight:600;}
+.mei-badge.ok{background:rgba(111,207,151,.12);color:var(--green);border:1px solid rgba(111,207,151,.25);}
+.mei-badge.pend{background:rgba(224,82,82,.1);color:var(--red);border:1px solid rgba(224,82,82,.2);}
+.mei-arrow{color:var(--text-dim);font-size:14px;}
+
+/* ── ADMIN ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:18px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px;}
+.stat-card .s-val{font-family:'DM Serif Display',serif;font-size:26px;color:var(--gold-light);margin-bottom:2px;}
+.stat-card .s-lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;}
+.ranking-item{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border);}
+.ranking-item:last-child{border-bottom:none;}
+.rank-num{font-family:'DM Serif Display',serif;font-size:17px;color:var(--text-dim);width:22px;text-align:center;}
+.rank-info{flex:1;}.rank-name{font-size:13px;color:var(--text);}.rank-sub{font-size:11px;color:var(--text-muted);}
+.rank-score{font-family:'DM Serif Display',serif;font-size:18px;color:var(--gold);}
+.alert-item{display:flex;align-items:flex-start;gap:9px;padding:8px 11px;border-radius:var(--radius-sm);font-size:12px;margin-bottom:7px;}
+.alert-item.red{background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.16);color:var(--red);}
+.alert-item.green{background:rgba(111,207,151,.06);border:1px solid rgba(111,207,151,.14);color:var(--green);}
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:14px;}
+@media(max-width:550px){.upload-grid{grid-template-columns:1fr;}}
+.upload-card{background:var(--surface2);border:1.5px dashed var(--border);border-radius:10px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;}
+.upload-card:hover{border-color:var(--gold-dim);}.upload-card.loaded{border-color:var(--gold);border-style:solid;}
+.upload-card input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-card h3{font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px;margin-top:6px;}
+.upload-card p{font-size:10px;color:var(--text-muted);}
+.upload-icon{font-size:22px;}
+.file-name{margin-top:5px;font-size:10px;color:var(--gold-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.slips-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;}
+@media(max-width:460px){.slips-grid{grid-template-columns:1fr;}}
+.admin-slip{transition:transform .2s,box-shadow .2s;}
+.admin-slip:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.4);}
+
+/* Admin monitores: tabla con edición */
+.monitor-table{width:100%;border-collapse:collapse;font-size:12px;}
+.monitor-table th{text-align:left;color:var(--text-muted);font-size:10px;font-weight:600;padding:6px 9px;border-bottom:1px solid var(--border);}
+.monitor-table td{padding:7px 9px;border-bottom:1px solid rgba(46,43,36,.4);vertical-align:middle;}
+.monitor-table tr:last-child td{border-bottom:none;}
+.pw-visible{font-family:monospace;color:var(--gold-light);font-size:12px;background:var(--surface2);padding:3px 8px;border-radius:5px;letter-spacing:.5px;}
+.edit-pw-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:12px;font-family:'DM Sans',sans-serif;width:110px;}
+.edit-pw-input:focus{outline:none;border-color:var(--gold-dim);}
+.btn-mini{padding:3px 9px;background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:5px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-mini:hover{border-color:var(--gold-dim);color:var(--gold);}
+.btn-mini.save{border-color:rgba(111,207,151,.3);color:var(--green);}
+.btn-mini.save:hover{background:rgba(111,207,151,.08);}
+
+/* Admin evaluaciones: vista por modelo */
+.modelo-eval-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;}
+.mec-header{padding:14px 18px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;transition:background .2s;}
+.mec-header:hover{background:rgba(201,168,76,.04);}
+.mec-avatar{width:36px;height:36px;border-radius:8px;background:rgba(201,168,76,.12);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:16px;color:var(--gold);flex-shrink:0;}
+.mec-info{flex:1;}
+.mec-nombre{font-size:13px;font-weight:600;color:var(--text);}
+.mec-sub{font-size:11px;color:var(--text-muted);margin-top:1px;}
+.mec-score{font-family:'DM Serif Display',serif;font-size:22px;color:var(--gold-light);margin-right:8px;}
+.mec-chevron{color:var(--text-dim);font-size:14px;transition:transform .25s;}
+.mec-chevron.open{transform:rotate(90deg);}
+.mec-body{display:none;border-top:1px solid var(--border);padding:14px 18px;}
+.mec-body.open{display:block;}
+.mec-periodo-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(46,43,36,.4);font-size:12px;}
+.mec-periodo-row:last-child{border-bottom:none;}
+.mec-periodo-label{color:var(--text-muted);}
+.mec-periodo-score{color:var(--gold-light);font-weight:600;}
+.mini-bars{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px;}
+.mini-bar-item{font-size:10px;}
+.mini-bar-name{color:var(--text-muted);margin-bottom:2px;}
+.mini-bar-track{height:4px;background:var(--surface);border-radius:2px;overflow:hidden;}
+.mini-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:2px;}
+
+/* Dropdown periodo modelo */
+.periodo-select-wrap{position:relative;margin-bottom:16px;}
+.periodo-select-wrap select{width:100%;background:var(--surface2);border:1.5px solid var(--gold-dim);color:var(--gold-light);border-radius:10px;padding:12px 40px 12px 15px;font-size:14px;font-family:'DM Serif Display',serif;cursor:pointer;appearance:none;}
+.periodo-select-wrap select:focus{outline:none;border-color:var(--gold);}
+.periodo-select-wrap::after{content:'▾';position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--gold);pointer-events:none;font-size:14px;}
+</style>
+</head>
+
+
+
+
+<!-- SELECTOR -->
+<div class="page active" id="page-select">
+  <div class="select-wrap">
+    <div class="portal-header">
+      <div style="font-family:'DM Serif Display',serif;font-size:clamp(28px,6vw,42px);color:var(--gold-light);margin-bottom:5px;">Stardom Studio</div>
+      <div style="font-size:12px;color:var(--text-muted);">Selecciona tu perfil para continuar</div>
+    </div>
+    <div class="profiles-grid">
+      <div class="profile-card" onclick="goProfile('modelo')">
+        <div class="profile-icon gold">⭐</div>
+        <div class="profile-info"><div class="profile-name">Portal Modelo</div><div class="profile-desc">Mis comprobantes de ingreso, puntaje STAR y evolución</div></div>
+        <div class="profile-arrow">›</div>
+      </div>
+      <div class="profile-card" onclick="goProfile('monitor')">
+        <div class="profile-icon blue">📋</div>
+        <div class="profile-info"><div class="profile-name">Portal Monitor</div><div class="profile-desc">Evaluar modelos por período</div></div>
+        <div class="profile-arrow">›</div>
+      </div>
+      <div class="profile-card" onclick="goProfile('admin')">
+        <div class="profile-icon red">🔐</div>
+        <div class="profile-info"><div class="profile-name">Administración</div><div class="profile-desc">Nómina, evaluaciones, monitores y dashboard</div></div>
+        <div class="profile-arrow">›</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ PORTAL MODELO ══ -->
+<div class="page" id="page-modelo">
+  <div class="inner">
+    <button class="btn-back" onclick="backToSelect()">‹ Perfiles</button>
+    <div class="portal-header">
+      <div class="badge">Portal Modelo</div>
+      <div class="portal-title">Stardom Studio</div>
+      <div class="portal-sub">Tus comprobantes de ingreso y puntaje STAR</div>
+    </div>
+    <div id="modelo-login">
+      <div class="card">
+        <div class="section-label">Acceso</div>
+        <div class="field-group">
+          <input type="number" id="modelo-cedula" placeholder="Número de cédula" onkeydown="if(event.key==='Enter')modeloBuscar()"/>
+        </div>
+        <button class="btn-primary" onclick="modeloBuscar()">Ver mi información</button>
+        <div class="status" id="modelo-status"></div>
+      </div>
+    </div>
+    <div id="modelo-results" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-family:'DM Serif Display',serif;font-size:17px;color:var(--gold-light);" id="modelo-nombre-title">—</div>
+        <button class="btn-ghost" onclick="modeloLogout()">← Salir</button>
+      </div>
+      <div class="tabs" id="modelo-main-tabs">
+        <button class="tab-btn active" onclick="modeloTab('comprobantes',this)">💰 Comprobantes</button>
+        <button class="tab-btn" onclick="modeloTab('star',this)">⭐ Mi STAR</button>
+      </div>
+      <!-- Tab Comprobantes -->
+      <div class="tab-panel active" id="tab-comprobantes">
+        <div class="card" style="margin-bottom:14px;">
+          <div class="section-label">Seleccionar período</div>
+          <div class="periodo-select-wrap">
+            <select id="modelo-periodo-select" onchange="onModeloPeriodoChange()">
+              <option value="">— Selecciona un período —</option>
+            </select>
+          </div>
+        </div>
+        <div id="modelo-slip-container"></div>
+      </div>
+      <!-- Tab STAR -->
+      <div class="tab-panel" id="tab-star">
+        <div class="card" id="star-no-data" style="text-align:center;padding:36px;display:none;">
+          <div style="font-size:30px;margin-bottom:10px;">📊</div>
+          <div style="font-size:13px;color:var(--text-muted);">Aún no tienes evaluaciones registradas.</div>
+        </div>
+        <div id="star-data-wrap" style="display:none;">
+          <div class="card">
+            <div class="star-score-ring">
+              <div class="score-number" id="star-score-num">—</div>
+              <div class="score-label">Puntaje STAR</div>
+              <div><span class="score-status" id="star-status-badge">—</span></div>
+              <div id="star-evo-badge" style="margin-top:7px;"></div>
+              <div class="trend-dots" id="star-trend"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px;">
+            <div class="section-label">Detalle por criterio</div>
+            <div id="star-bars"></div>
+          </div>
+          <div class="card" style="margin-top:14px;">
+            <div class="section-label">Historial de períodos</div>
+            <table class="hist-table">
+              <thead><tr><th>Período</th><th>Monitor</th><th style="text-align:right;">Puntaje</th></tr></thead>
+              <tbody id="star-hist-body"></tbody>
+            </table>
+          </div>
+          <div class="card" style="margin-top:14px;">
+            <div class="section-label">Retroalimentación · Último período</div>
+            <div id="star-feedback-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PORTAL MONITOR ══ -->
+<div class="page" id="page-monitor">
+  <div class="inner">
+    <button class="btn-back" onclick="backToSelect()">‹ Perfiles</button>
+    <div class="portal-header">
+      <div class="badge">Monitor</div>
+      <div class="portal-title">Evaluación STAR</div>
+      <div class="portal-sub">Calificación de desempeño por período</div>
+    </div>
+    <div id="monitor-login">
+      <div class="card">
+        <div class="section-label">Identificación del Monitor</div>
+        <div class="field-group">
+          <label>ID de Monitor</label>
+          <input type="text" id="monitor-id-input" placeholder="Tu ID de monitor"/>
+        </div>
+        <div class="field-group">
+          <label>Contraseña</label>
+          <input type="password" id="monitor-pw-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')monitorLogin()"/>
+        </div>
+        <button class="btn-primary" onclick="monitorLogin()">Ingresar</button>
+        <div class="status" id="monitor-login-status"></div>
+      </div>
+    </div>
+    <div id="monitor-panel" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <div style="font-size:13px;color:var(--gold);" id="monitor-welcome">—</div>
+        <button class="btn-ghost" onclick="monitorLogout()">Salir</button>
+      </div>
+      <div class="tabs" id="monitor-tabs">
+        <button class="tab-btn active" onclick="monitorTab('mon-evaluar',this)">📝 Evaluar</button>
+        <button class="tab-btn" onclick="monitorTab('mon-historial',this)">📊 Historial</button>
+      </div>
+      <!-- Tab Evaluar -->
+      <div class="tab-panel active" id="tab-mon-evaluar">
+        <!-- PASO 1: Selección de período -->
+        <div class="card" id="mon-step1">
+          <div class="section-label">Paso 1 · Seleccionar período</div>
+          <div class="field-group">
+            <label>Período a evaluar</label>
+            <select id="mon-select-periodo" onchange="onMonitorPeriodoChange()">
+              <option value="">— Selecciona el período —</option>
+            </select>
+          </div>
+        </div>
+        <!-- PASO 2: Lista de modelos del período -->
+        <div id="mon-step2" style="display:none;margin-top:14px;">
+          <div class="card">
+            <div class="section-label">Paso 2 · Seleccionar modelo</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;" id="mon-periodo-label"></div>
+            <div id="mon-modelos-list"></div>
+          </div>
+        </div>
+        <!-- PASO 3: Formulario de evaluación -->
+        <div id="mon-step3" style="display:none;margin-top:14px;">
+          <div class="card" style="margin-bottom:13px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text);" id="mon-eval-nombre">—</div>
+                <div style="font-size:11px;color:var(--text-muted);" id="mon-eval-info">—</div>
+              </div>
+              <button class="btn-ghost" onclick="monitorVolverLista()" style="font-size:11px;">← Volver</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-label">1. Gestión en Transmisión (40 pts)</div>
+            <div id="eval-criteria-trans"></div>
+            <div class="section-label" style="margin-top:15px;">2. Productividad (35 pts)</div>
+            <div id="eval-criteria-prod"></div>
+            <div class="section-label" style="margin-top:15px;">3. Gestión de Cuenta (25 pts)</div>
+            <div id="eval-criteria-cuenta"></div>
+          </div>
+          <div class="card" style="margin-top:13px;text-align:center;">
+            <div class="section-label" style="justify-content:center;">Puntaje calculado</div>
+            <div class="score-preview" id="eval-score-preview">0 <span>/ 100</span></div>
+            <div id="eval-status-preview" style="font-size:12px;color:var(--text-muted);margin-bottom:14px;"></div>
+          </div>
+          <div class="card" style="margin-top:13px;">
+            <div class="section-label">Retroalimentación</div>
+            <div class="field-group"><label>Fortalezas</label><textarea id="eval-fortalezas" placeholder="Describe las fortalezas observadas..."></textarea></div>
+            <div class="field-group"><label>Oportunidades de mejora</label><textarea id="eval-mejoras" placeholder="Aspectos a mejorar..."></textarea></div>
+            <div class="field-group"><label>Plan de acción</label><textarea id="eval-plan" placeholder="Acciones concretas para el siguiente período..."></textarea></div>
+          </div>
+          <div style="margin-top:13px;">
+            <button class="btn-primary" onclick="guardarEvaluacion()">✦ Guardar evaluación</button>
+            <div class="status" id="monitor-eval-status"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Tab Historial -->
+      <div class="tab-panel" id="tab-mon-historial">
+        <div class="card">
+          <div class="section-label">Evaluaciones registradas</div>
+          <div id="monitor-hist-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMINISTRACIÓN ══ -->
+<div class="page" id="page-admin">
+  <div class="pw-overlay" id="admin-pw-overlay">
+    <div class="pw-card">
+      <h2>Área Administrativa</h2>
+      <p>Stardom Studio · Solo personal autorizado<br></p>
+      <div class="field-group" style="margin-bottom:10px;">
+        <input type="password" id="adminPwInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkAdminPw()"/>
+      </div>
+      <button class="btn-primary" onclick="checkAdminPw()">Ingresar</button>
+      <div class="pw-error" id="adminPwError">Contraseña incorrecta</div>
+      <button class="btn-back" style="margin-top:14px;justify-content:center;" onclick="backToSelect()">‹ Volver</button>
+    </div>
+  </div>
+  <div id="admin-main" style="display:none;">
+    <div class="inner wide">
+      <button class="btn-back" onclick="backToSelect()">‹ Perfiles</button>
+      <div class="portal-header">
+        <div class="badge">Administrador</div>
+        <div class="portal-title">Dashboard Stardom</div>
+        <div class="portal-sub">Panel de gestión · Stardom Studio</div>
+      </div>
+      <div class="tabs" id="admin-main-tabs">
+        <button class="tab-btn active" onclick="adminTab('nomina',this)">📊 Nómina</button>
+        <button class="tab-btn" onclick="adminTab('evaluaciones',this)">⭐ Seguimiento</button>
+        <button class="tab-btn" onclick="adminTab('monitores',this)">👤 Monitores</button>
+        <button class="tab-btn" onclick="adminTab('dashboard',this)">📈 Dashboard</button>
+      </div>
+
+      <!-- Tab Nómina -->
+      <div class="tab-panel active" id="atab-nomina">
+        <div class="card">
+          <div class="section-label">Archivos y período</div>
+          <div class="upload-grid">
+            <div class="upload-card" id="card1">
+              <input type="file" accept=".xlsx,.xls" id="file1" onchange="handleFile(1,this)">
+              <div class="upload-icon">📊</div>
+              <h3>Pagos Principal</h3>
+              <p>Montos, banco, retención</p>
+              <div class="file-name" id="name1">Sin archivo</div>
+            </div>
+            <div class="upload-card" id="card2">
+              <input type="file" accept=".xlsx,.xls" id="file2" onchange="handleFile(2,this)">
+              <div class="upload-icon">📋</div>
+              <h3>Pago por Nicks</h3>
+              <p>Plataformas y nicks</p>
+              <div class="file-name" id="name2">Sin archivo</div>
+            </div>
+          </div>
+          <!-- Tutoriales de dónde sacar cada archivo -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+            <div style="background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.13);border-radius:8px;padding:10px 13px;">
+              <div style="font-size:9px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📌 ¿Dónde lo descargo?</div>
+              <div style="font-size:11px;color:var(--text-muted);line-height:1.65;">Entra a <span style="color:var(--text);">TWL</span> → <span style="color:var(--text);">Pagos Modelos</span> → <span style="color:var(--text);">Pago Modelos</span> → <span style="color:var(--text);">Pagos</span> → descarga <strong style="color:var(--gold-light);">Listado de Pagos</strong></div>
+            </div>
+            <div style="background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.13);border-radius:8px;padding:10px 13px;">
+              <div style="font-size:9px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📌 ¿Dónde lo descargo?</div>
+              <div style="font-size:11px;color:var(--text-muted);line-height:1.65;">Entra a <span style="color:var(--text);">TWL</span> → <span style="color:var(--text);">Informe de Producción</span> → exporta <strong style="color:var(--gold-light);">Ventas por Nick</strong></div>
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Período</label>
+            <input type="text" id="periodoInput" placeholder="Ej: Semana 19-25 Mayo 2026"/>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn-primary" id="btnGenerate" onclick="generate()" disabled style="flex:1;">✦ Generar comprobantes</button>
+            <button class="btn-ghost" style="display:none;">—</button>
+          </div>
+          <div class="status" id="admin-nomina-status"></div>
+        </div>
+        <div id="admin-results-section" style="display:none;margin-top:18px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <div style="font-family:'DM Serif Display',serif;font-size:17px;color:var(--gold-light);" id="admin-results-title">Comprobantes</div>
+            <button class="btn-ghost" onclick="downloadAllSlips()">⬇ Descargar todos</button>
+          </div>
+          <!-- Dropdown dorado de período -->
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;">Ver período:</div>
+            <div class="periodo-select-wrap" style="flex:1;min-width:220px;max-width:380px;margin-bottom:0;">
+              <select id="admin-periodo-select" onchange="onAdminPeriodoChange()">
+                <option value="">— Todos los períodos —</option>
+              </select>
+            </div>
+            <!-- Selector de modelo (dentro del período) -->
+            <div class="periodo-select-wrap" style="flex:1;min-width:180px;max-width:260px;margin-bottom:0;">
+              <select id="admin-modelo-select" onchange="onAdminModeloChange()">
+                <option value="">— Todas las modelos —</option>
+              </select>
+            </div>
+          </div>
+          <div class="slips-grid" id="admin-slips-container"></div>
+        </div>
+      </div>
+
+      <!-- Tab Seguimiento de Modelos -->
+      <div class="tab-panel" id="atab-evaluaciones">
+        <!-- Alertas de modelos sin evaluar -->
+        <div id="admin-eval-alerts" style="margin-bottom:14px;"></div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+            <div class="section-label" style="margin-bottom:0;">Seguimiento por modelo</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;">Filtrar período:</span>
+              <div class="periodo-select-wrap" style="min-width:200px;margin-bottom:0;">
+                <select id="seg-periodo-filter" onchange="renderAdminEvaluaciones()" style="font-size:12px;padding:7px 36px 7px 12px;">
+                  <option value="">Todos los períodos</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div id="admin-eval-content">
+            <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Cargando datos...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Monitores -->
+      <div class="tab-panel" id="atab-monitores">
+        <div class="card" style="margin-bottom:14px;">
+          <div class="section-label">Registrar nuevo monitor</div>
+          <div class="input-row">
+            <div class="field-group"><label>ID del Monitor</label><input type="text" id="nuevo-monitor-id" placeholder="Ej: MON-03"/></div>
+            <div class="field-group"><label>Nombre completo</label><input type="text" id="nuevo-monitor-nombre" placeholder="Nombre completo"/></div>
+          </div>
+          <div class="field-group"><label>Contraseña</label><input type="text" id="nuevo-monitor-pw" placeholder="Contraseña visible"/></div>
+          <button class="btn-primary" onclick="registrarMonitor()">✦ Registrar monitor</button>
+          <div class="status" id="admin-monitor-status"></div>
+        </div>
+        <div class="card">
+          <div class="section-label">Monitores registrados</div>
+          <div id="admin-monitores-list"></div>
+        </div>
+      </div>
+
+      <!-- Tab Dashboard -->
+      <div class="tab-panel" id="atab-dashboard">
+        <div id="dashboard-content"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="spinner-overlay" id="spinnerOverlay">
+  <div class="spinner"></div>
+  <div class="spinner-msg" id="spinnerMsg">Procesando...</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// CONFIGURACIÓN — CAMBIA SOLO ESTA URL
+// ══════════════════════════════════════════════════
+const SCRIPT_URL = ''; // ← Pega aquí la URL de tu Google Apps Script
+
+
+
+let sessionEvals = [];       // evaluaciones guardadas en esta sesión (espejo local)
+let sessionMonitores = [];   // monitores registrados en esta sesión (espejo local)
+const ADMIN_PASSWORD = 'stardom2026'; // ← cambia aquí tu contraseña de admin
+let monitorSession = null;
+let allSlipsData = [];
+let data1 = null, data2 = null;
+let monitorPeriodoActual = '';
+let monitorModeloActual = null;
+let DB = { comprobantes: [], evaluaciones: [], monitores: [] }; // se llena desde Sheets
+
+
+// ── Helpers ──
+function fmtCOP(v){const n=parseFloat(v);if(!n||isNaN(n))return'—';return'$'+n.toLocaleString('es-CO',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+function backToSelect(){showPage('page-select');}
+function goProfile(p){
+  if(p==='modelo') showPage('page-modelo');
+  else if(p==='monitor') showPage('page-monitor');
+  else if(p==='admin'){showPage('page-admin');initAdminOverlay();}
+}
+function showSpinner(msg){document.getElementById('spinnerMsg').textContent=msg||'...';document.getElementById('spinnerOverlay').classList.add('show');}
+function hideSpinner(){document.getElementById('spinnerOverlay').classList.remove('show');}
+function setStatus(id,msg,type){const el=document.getElementById(id);if(!el)return;el.textContent=msg;el.className='status '+type;}
+function apiUrl(params=''){return SCRIPT_URL+(params?'?'+params:'');}
+function calcStarStatus(score){
+  if(score>=90)return{label:'Elite',cls:'elite'};
+  if(score>=80)return{label:'Excelente',cls:'excelente'};
+  if(score>=70)return{label:'Bueno',cls:'bueno'};
+  if(score>=60)return{label:'Requiere mejora',cls:'mejora'};
+  return{label:'Riesgo',cls:'riesgo'};
+}
+// Obtiene lista de períodos únicos (más reciente primero según orden de carga)
+function getPeriodosUnicos(){
+  const set = new Set(DB.comprobantes.map(d=>d.periodo));
+  return [...set];
+}
+
+// ══════════════════════════════════════════════════
+// PORTAL MODELO
+// ══════════════════════════════════════════════════
+let modeloDataAll=[], modeloEvals=[];
+
+async function modeloBuscar(){
+  const cedula = document.getElementById('modelo-cedula').value.trim();
+  if(!cedula){setStatus('modelo-status','Escribe tu número de cédula','error');return;}
+  if(!SCRIPT_URL){setStatus('modelo-status','⚠ La URL de Apps Script no está configurada. Contacta al administrador.','error');return;}
+  showSpinner('Buscando tu información...');
+  try{
+    const r = await fetch(apiUrl('cedula='+encodeURIComponent(cedula)));
+    const d = await r.json();
+    hideSpinner();
+    if(d.status!=='ok'){setStatus('modelo-status',d.msg||'No se encontraron registros para ese documento.','error');return;}
+    const data  = d.data  || [];
+    const evals = [...(d.evals||[]), ...sessionEvals.filter(e=>String(e.cedula)===cedula)];
+    if(!data.length && !evals.length){setStatus('modelo-status','No se encontraron registros para ese documento.','error');return;}
+    // Sync local DB mirror
+    data.forEach(m=>{ if(!DB.comprobantes.find(c=>c.documento===m.documento&&c.periodo===m.periodo)) DB.comprobantes.push(m); });
+    evals.forEach(e=>{ if(!DB.evaluaciones.find(ev=>ev.cedula===e.cedula&&ev.periodo===e.periodo)) DB.evaluaciones.push(e); });
+    modeloDataAll=data; modeloEvals=evals;
+    document.getElementById('modelo-login').style.display='none';
+    document.getElementById('modelo-results').style.display='block';
+    const nombre = data[0]?.nombre || 'Modelo';
+    document.getElementById('modelo-nombre-title').textContent = nombre.split(' ').slice(0,2).join(' ');
+    renderModeloComprobantes(data);
+    renderStarDashboard(evals);
+  }catch(e){
+    hideSpinner();
+    setStatus('modelo-status','Error de conexión. Verifica tu internet.','error');
+  }
+}
+function modeloLogout(){
+  document.getElementById('modelo-login').style.display='block';
+  document.getElementById('modelo-results').style.display='none';
+  document.getElementById('modelo-cedula').value='';
+  document.getElementById('modelo-status').className='status';
+}
+function modeloTab(tab,btn){
+  document.querySelectorAll('#modelo-main-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#modelo-results .tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+function renderModeloComprobantes(data){
+  const sel = document.getElementById('modelo-periodo-select');
+  sel.innerHTML='';
+  const periodos=[...new Set(data.map(d=>d.periodo))];
+  // El primero = último subido = primera opción seleccionada
+  periodos.forEach((p,i)=>{
+    const opt=document.createElement('option');
+    opt.value=p; opt.textContent=p;
+    if(i===0) opt.selected=true;
+    sel.appendChild(opt);
+  });
+  // Mostrar el más reciente
+  const primerPeriodo = periodos[0];
+  if(primerPeriodo) renderModeloSlip(data.find(d=>d.periodo===primerPeriodo));
+}
+function onModeloPeriodoChange(){
+  const periodo = document.getElementById('modelo-periodo-select').value;
+  const m = modeloDataAll.find(d=>d.periodo===periodo);
+  if(m) renderModeloSlip(m);
+}
+function renderModeloSlip(m){
+  document.getElementById('modelo-slip-container').innerHTML = buildSlipHTML(m,'modelo-slip-render',false);
+}
+async function descargarSlipModelo(){
+  const el=document.getElementById('modelo-slip-render');
+  const btn=el.querySelector('.footer-btns');btn.style.visibility='hidden';
+  showSpinner('Generando imagen...');
+  try{
+    const cv=await html2canvas(el,{backgroundColor:'#1a1815',scale:2,useCORS:true,logging:false});
+    const a=document.createElement('a');
+    a.download=(modeloDataAll[0]?.nombre||'comprobante').replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g,'').trim()+'.png';
+    a.href=cv.toDataURL('image/png');a.click();
+  }finally{btn.style.visibility='visible';hideSpinner();}
+}
+
+function buildSlipHTML(m, slipId, isAdmin){
+  const plats=Array.isArray(m.plataformas)?m.plataformas:[];
+  const obsId='obs-'+slipId;
+  const obsSavedId='obs-saved-'+slipId;
+  return `<div class="slip${isAdmin?' admin-slip':''}" id="${slipId}"
+    data-name="${(m.nombre||'').replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g,'').trim()}"
+    data-telefono="${m.telefono||''}"
+    data-doc="${m.documento||''}"
+    data-periodo="${m.periodo||''}">
+    <div class="slip-header-inner">
+      <div>
+        <div class="slip-company">STARDOM STUDIO</div>
+        <div class="slip-name">${m.nombre||'—'}</div>
+        <div class="slip-doc">CC: ${m.documento} · ID: ${m.id_modelo||'—'}</div>
+      </div>
+      <div class="slip-period"><div class="lbl">Período</div><div class="val">${m.periodo}</div></div>
+    </div>
+    <div class="slip-body">
+      <div class="section-label">Información</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Teléfono: <span style="color:var(--text);">${m.telefono||'—'}</span></div>
+      ${plats.length?`<div class="section-label">Plataformas</div>
+      <table class="plat-table"><thead><tr><th>Plataforma</th><th>Nick</th><th>USD</th></tr></thead><tbody>
+      ${plats.map(p=>`<tr><td><span class="plat-badge">${p.plat}</span></td><td>${p.nick}</td><td>${p.usd>0?'USD '+parseFloat(p.usd).toFixed(2):'—'}</td></tr>`).join('')}
+      </tbody></table>`:''}
+      <div class="section-label" style="margin-top:10px;">Liquidación</div>
+      <div class="totals-box">
+        <div class="t-row"><span class="lbl">Total facturado</span><span class="val">USD ${parseFloat(m.total_usd||0).toFixed(2)}</span></div>
+        <div class="t-row"><span class="lbl">Porcentaje modelo</span><span class="val">${m.porcentaje||'—'}%</span></div>
+        ${parseFloat(m.trm)>0?`<div class="t-row"><span class="lbl">TRM</span><span class="val">$${parseFloat(m.trm).toLocaleString('es-CO',{maximumFractionDigits:0})} COP</span></div>`:''}
+        <div class="t-row"><span class="lbl">Valor al ${m.porcentaje}%</span><span class="val">${fmtCOP(m.pago_cop)} COP</span></div>
+        ${parseFloat(m.bonos_usd)>0?`<div class="t-row"><span class="lbl">Bonificaciones</span><span class="val" style="color:var(--green)">+ USD ${parseFloat(m.bonos_usd).toFixed(2)}</span></div>`:''}
+        ${parseFloat(m.descuentos_cop)>0?`<div class="t-row deduct"><span class="lbl">Descuentos</span><span class="val">− ${fmtCOP(m.descuentos_cop)} COP</span></div>`:''}
+        ${parseFloat(m.eps_cop)>0?`<div class="t-row deduct"><span class="lbl">EPS</span><span class="val">− ${fmtCOP(m.eps_cop)} COP</span></div>`:''}
+        ${parseFloat(m.retencion)>0?`<div class="t-row deduct"><span class="lbl">Retención</span><span class="val">− ${fmtCOP(m.retencion)} COP</span></div>`:''}
+        <div class="t-row hl"><span class="lbl">NETO A PAGAR</span><span class="val">${fmtCOP(m.neto_pagar)} COP</span></div>
+      </div>
+      ${isAdmin?`
+      <div class="obs-area">
+        <div class="obs-label">Observaciones del administrador</div>
+        <textarea class="obs-input" id="${obsId}" placeholder="Escribe observaciones internas sobre este comprobante...">${m.observaciones||''}</textarea>
+        <div style="display:flex;align-items:center;">
+          <button class="obs-save-btn" onclick="guardarObservacion('${slipId}','${obsId}','${obsSavedId}')">Guardar</button>
+          <span class="obs-saved" id="${obsSavedId}">✓ Guardado</span>
+        </div>
+      </div>`:
+      (m.observaciones?`<div class="obs-area" style="border-color:rgba(201,168,76,.15);">
+        <div class="obs-label">Observaciones</div>
+        <div style="font-size:12px;color:var(--text);white-space:pre-line;line-height:1.5;">${m.observaciones}</div>
+      </div>`:'')
+      }
+    </div>
+    <div class="slip-footer">
+      <div class="bank-info"><strong>${m.banco||'—'} · ${m.tipo_cuenta||'—'}</strong>Cta: ${m.nro_cuenta||'—'}</div>
+      <div class="footer-btns">
+        ${isAdmin
+          ?`<button class="btn-sm dl" onclick="downloadAdminSlip('${slipId}')">⬇</button><button class="btn-sm wa" onclick="sendWhatsApp('${slipId}')">💬</button>`
+          :`<button class="btn-sm dl" onclick="descargarSlipModelo()">⬇ Descargar</button>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function guardarObservacion(slipId, obsId, savedId){
+  const texto = document.getElementById(obsId).value;
+  const el = document.getElementById(slipId);
+  const doc = el.dataset.doc;
+  const periodo = el.dataset.periodo;
+  // Actualizar en DB.comprobantes
+  const comp = DB.comprobantes.find(c=>String(c.documento)===doc && c.periodo===periodo);
+  if(comp) comp.observaciones = texto;
+  const savedEl = document.getElementById(savedId);
+  savedEl.textContent='Guardando...'; savedEl.style.display='inline';
+  // Guardar en Sheets
+  if(SCRIPT_URL){
+    fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'saveObservacion',documento:doc,periodo,observaciones:texto})})
+      .then(r=>r.json())
+      .then(d=>{ savedEl.textContent = d.status==='ok' ? '✓ Guardado en Sheets' : '✓ Guardado local'; setTimeout(()=>{ savedEl.style.display='none'; },2500); })
+      .catch(()=>{ savedEl.textContent='✓ Guardado local'; setTimeout(()=>{ savedEl.style.display='none'; },2500); });
+  } else {
+    savedEl.textContent='✓ Guardado'; setTimeout(()=>{ savedEl.style.display='none'; },2500);
+  }
+  if(modeloDataAll.length && modeloDataAll.some(m=>m.documento===doc && m.periodo===periodo)){
+    const idx=modeloDataAll.findIndex(m=>m.documento===doc && m.periodo===periodo);
+    if(idx>=0) modeloDataAll[idx].observaciones=texto;
+  }
+}
+
+// ── STAR Dashboard ──
+function calcEvo(evals){
+  const n=evals.length; if(n<=1)return null;
+  const current=parseFloat(evals[n-1].puntaje_total);
+  const prevSlice=evals.slice(Math.max(0,n-5),n-1);
+  const avg=prevSlice.reduce((s,e)=>s+parseFloat(e.puntaje_total),0)/prevSlice.length;
+  return{diff:+(current-avg).toFixed(2),avg:+avg.toFixed(2)};
+}
+const CRITERIOS=[
+  {key:'uso_celular',label:'Uso del celular',max:10},
+  {key:'presencia_camara',label:'Presencia en cámara',max:10},
+  {key:'sensualidad',label:'Sensualidad y actitud',max:10},
+  {key:'performance',label:'Performance general',max:10},
+  {key:'horas_conectadas',label:'Horas conectadas',max:15},
+  {key:'facturacion',label:'Facturación',max:20},
+  {key:'contenido_nuevo',label:'Contenido nuevo',max:10},
+  {key:'respuesta_usuarios',label:'Respuesta de usuarios',max:15},
+];
+function renderStarDashboard(evals){
+  if(!evals||!evals.length){
+    document.getElementById('star-no-data').style.display='block';
+    document.getElementById('star-data-wrap').style.display='none'; return;
+  }
+  document.getElementById('star-no-data').style.display='none';
+  document.getElementById('star-data-wrap').style.display='block';
+  const last=evals[evals.length-1];
+  const score=parseFloat(last.puntaje_total)||0;
+  const st=calcStarStatus(score);
+  document.getElementById('star-score-num').textContent=score;
+  const badge=document.getElementById('star-status-badge');badge.textContent=st.label;badge.className='score-status '+st.cls;
+  const evo=calcEvo(evals);
+  const evoBadgeEl=document.getElementById('star-evo-badge');
+  if(evo){const c=evo.diff>1?'up':evo.diff<-1?'down':'stable';const ico=evo.diff>0?'↑':evo.diff<0?'↓':'→';evoBadgeEl.innerHTML=`<span class="evo-badge ${c}">${ico} ${evo.diff>0?'+':''}${evo.diff} pts vs promedio histórico</span>`;}
+  else evoBadgeEl.innerHTML='<span style="font-size:11px;color:var(--text-muted);">Primer período evaluado</span>';
+  const trendEl=document.getElementById('star-trend');
+  trendEl.innerHTML=evals.map((e,i)=>{const isCurrent=i===evals.length-1;return`<span class="trend-dot ${isCurrent?'current':'old'}"></span><span style="font-size:11px;${isCurrent?'color:var(--gold);font-weight:600':'color:var(--text-muted)'}">${parseFloat(e.puntaje_total)}</span>`;}).join('<span style="color:var(--text-dim);font-size:10px;">→</span>');
+  document.getElementById('star-bars').innerHTML=CRITERIOS.map(c=>{const pts=parseFloat(last[c.key])||0;const pct=Math.round((pts/c.max)*100);return`<div class="bar-item"><div class="bar-top"><span class="bar-name">${c.label}</span><span class="bar-pts">${pts}/${c.max}</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div>`;}).join('');
+  document.getElementById('star-hist-body').innerHTML=[...evals].reverse().map(e=>`<tr><td>${e.periodo||'—'}</td><td style="color:var(--text-muted)">${e.monitor_id||'—'}</td><td>${parseFloat(e.puntaje_total)||0}</td></tr>`).join('');
+  const feedEl=document.getElementById('star-feedback-content');
+  if(last.fortalezas||last.mejoras||last.plan){
+    feedEl.innerHTML='';
+    if(last.fortalezas)feedEl.innerHTML+=`<div style="margin-bottom:11px;"><div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:5px;">Fortalezas</div><div style="font-size:13px;color:var(--text);white-space:pre-line;">${last.fortalezas}</div></div>`;
+    if(last.mejoras)feedEl.innerHTML+=`<div style="margin-bottom:11px;"><div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:5px;">Oportunidades de mejora</div><div style="font-size:13px;color:var(--text);white-space:pre-line;">${last.mejoras}</div></div>`;
+    if(last.plan)feedEl.innerHTML+=`<div><div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:5px;">Plan de acción</div><div style="font-size:13px;color:var(--text);white-space:pre-line;">${last.plan}</div></div>`;
+  } else feedEl.innerHTML='<div style="font-size:13px;color:var(--text-muted);">Sin retroalimentación para este período.</div>';
+}
+
+// ══════════════════════════════════════════════════
+// PORTAL MONITOR
+// ══════════════════════════════════════════════════
+const EVAL_CRITERIA=[
+  {id:'uso_celular',label:'Uso del celular',desc:'Distracción durante transmisión',
+   opts:[{v:10,l:'No usa celular (10)'},{v:7,l:'Uso ocasional (7)'},{v:4,l:'Uso frecuente (4)'},{v:0,l:'Uso excesivo (0)'}]},
+  {id:'presencia_camara',label:'Presencia y movimiento',desc:'Energía, dinamismo',
+   opts:[{v:10,l:'Muy activa y dinámica (10)'},{v:7,l:'Buena presencia (7)'},{v:4,l:'Poco movimiento (4)'},{v:0,l:'Prácticamente inmóvil (0)'}]},
+  {id:'sensualidad',label:'Sensualidad y actitud',desc:'Expresión corporal y seguridad',
+   opts:[{v:10,l:'Excelente presencia (10)'},{v:7,l:'Buena actitud (7)'},{v:4,l:'Regular (4)'},{v:0,l:'Deficiente (0)'}]},
+  {id:'performance',label:'Performance general',desc:'Carisma, creatividad, interacción',
+   opts:[{v:10,l:'Excelente (10)'},{v:7,l:'Buena (7)'},{v:4,l:'Regular (4)'},{v:0,l:'Deficiente (0)'}]},
+];
+const EVAL_CRITERIA_PROD=[
+  {id:'horas_conectadas',label:'Horas conectadas',desc:'Meta: 40 horas semanales',
+   opts:[{v:15,l:'40+ horas (15)'},{v:12,l:'35-39 h (12)'},{v:9,l:'30-34 h (9)'},{v:6,l:'25-29 h (6)'},{v:0,l:'Menos de 25 h (0)'}]},
+  {id:'facturacion',label:'Facturación semanal',desc:'Rango en USD facturado en el período',
+   opts:[{v:20,l:'USD 2.000 o más (20)'},{v:17,l:'USD 1.500 - 1.999 (17)'},{v:15,l:'USD 1.000 - 1.499 (15)'},{v:10,l:'USD 600 - 999 (10)'},{v:5,l:'USD 300 - 599 (5)'},{v:0,l:'Menos de USD 300 (0)'}]},
+];
+const EVAL_CRITERIA_CUENTA=[
+  {id:'contenido_nuevo',label:'Contenido nuevo',desc:'Actualización del perfil',
+   opts:[{v:10,l:'Constante (10)'},{v:7,l:'Parcial (7)'},{v:4,l:'Poco (4)'},{v:0,l:'Sin actualizaciones (0)'}]},
+  {id:'respuesta_usuarios',label:'Respuesta de usuarios',desc:'Mensajes y seguimiento',
+   opts:[{v:15,l:'Excelente (15)'},{v:10,l:'Buena (10)'},{v:5,l:'Regular (5)'},{v:0,l:'Deficiente (0)'}]},
+];
+
+async function monitorLogin(){
+  const id=document.getElementById('monitor-id-input').value.trim().toUpperCase();
+  const pw=document.getElementById('monitor-pw-input').value.trim();
+  if(!id||!pw){setStatus('monitor-login-status','Completa todos los campos','error');return;}
+  if(!SCRIPT_URL){setStatus('monitor-login-status','URL de Apps Script no configurada','error');return;}
+  showSpinner('Verificando...');
+  try{
+    const r=await fetch(apiUrl('action=monitorLogin&monitorId='+encodeURIComponent(id)+'&pw='+encodeURIComponent(pw)));
+    const d=await r.json();
+    hideSpinner();
+    if(d.status!=='ok'){setStatus('monitor-login-status',d.msg||'ID o contraseña incorrectos','error');return;}
+    const monitor={monitor_id:d.monitorId,nombre:d.nombre,password:pw};
+    monitorSession={id:monitor.monitor_id,nombre:monitor.nombre};
+    document.getElementById('monitor-login').style.display='none';
+    document.getElementById('monitor-panel').style.display='block';
+    document.getElementById('monitor-welcome').textContent='Monitor: '+monitor.nombre+' ('+monitor.monitor_id+')';
+    // Resetear tabs
+    document.querySelectorAll('#monitor-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#monitor-panel .tab-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelector('#monitor-tabs .tab-btn').classList.add('active');
+    document.getElementById('tab-mon-evaluar').classList.add('active');
+    poblarSelectPeriodosMonitor();
+    loadMonitorHistorial();
+  }catch(e){ hideSpinner(); setStatus('monitor-login-status','Error de conexión. Verifica tu internet.','error'); }
+}
+function monitorLogout(){
+  monitorSession=null;
+  document.getElementById('monitor-login').style.display='block';
+  document.getElementById('monitor-panel').style.display='none';
+  document.getElementById('monitor-id-input').value='';
+  document.getElementById('monitor-pw-input').value='';
+  document.getElementById('monitor-login-status').className='status';
+}
+function monitorTab(tab,btn){
+  document.querySelectorAll('#monitor-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#monitor-panel .tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='mon-historial')loadMonitorHistorial();
+}
+
+function poblarSelectPeriodosMonitor(){
+  const periodos = getPeriodosUnicos();
+  const sel = document.getElementById('mon-select-periodo');
+  sel.innerHTML='<option value="">— Selecciona el período —</option>';
+  periodos.forEach((p,i)=>{
+    const opt=document.createElement('option');
+    opt.value=p; opt.textContent=p + (i===0?' (último)':'');
+    sel.appendChild(opt);
+  });
+  // Seleccionar automáticamente el último período
+  if(periodos.length>0){
+    sel.value = periodos[0];
+    onMonitorPeriodoChange();
+  }
+}
+
+function onMonitorPeriodoChange(){
+  const periodo = document.getElementById('mon-select-periodo').value;
+  if(!periodo){ document.getElementById('mon-step2').style.display='none'; document.getElementById('mon-step3').style.display='none'; return; }
+  monitorPeriodoActual = periodo;
+  // Modelos que tienen comprobante en ese período
+  const modelosDelPeriodo = DB.comprobantes.filter(c=>c.periodo===periodo);
+  // Evaluaciones ya hechas en ese período por cualquier monitor
+  const evalsDelPeriodo = [...DB.evaluaciones,...sessionEvals].filter(e=>e.periodo===periodo);
+  const evaluadas = new Set(evalsDelPeriodo.map(e=>e.cedula));
+
+  document.getElementById('mon-periodo-label').textContent=`Período: ${periodo} · ${modelosDelPeriodo.length} modelos con comprobante`;
+  const lista = document.getElementById('mon-modelos-list');
+  if(!modelosDelPeriodo.length){
+    lista.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px;">Sin modelos con comprobante en este período.</div>';
+    document.getElementById('mon-step2').style.display='block';
+    document.getElementById('mon-step3').style.display='none';
+    return;
+  }
+  lista.innerHTML = modelosDelPeriodo.map(m=>{
+    const yaEval = evaluadas.has(String(m.documento));
+    const evalInfo = evalsDelPeriodo.find(e=>e.cedula===String(m.documento));
+    return `<div class="modelo-eval-item ${yaEval?'evaluada':'pendiente'}" onclick="seleccionarModeloEval('${m.documento}','${periodo}')">
+      <div class="mei-dot ${yaEval?'verde':'rojo'}"></div>
+      <div class="mei-info">
+        <div class="mei-nombre">${m.nombre}</div>
+        <div class="mei-sub">CC: ${m.documento} · ID: ${m.id_modelo}</div>
+      </div>
+      <span class="mei-badge ${yaEval?'ok':'pend'}">${yaEval?'✓ Evaluada · '+evalInfo.puntaje_total+' pts':'Pendiente'}</span>
+      <div class="mei-arrow">›</div>
+    </div>`;
+  }).join('');
+  document.getElementById('mon-step2').style.display='block';
+  document.getElementById('mon-step3').style.display='none';
+}
+
+function seleccionarModeloEval(doc, periodo){
+  const modelo = DB.comprobantes.find(c=>c.documento===doc && c.periodo===periodo);
+  if(!modelo) return;
+  monitorModeloActual = modelo;
+  document.getElementById('mon-eval-nombre').textContent = modelo.nombre;
+  document.getElementById('mon-eval-info').textContent = `CC: ${modelo.documento} · Período: ${periodo}`;
+  // Construir criterios
+  buildEvalCriteria();
+  // Ver si ya hay evaluación previa para este modelo/período y prellenar
+  const evalPrevia = [...DB.evaluaciones,...sessionEvals].find(e=>e.cedula===doc&&e.periodo===periodo);
+  if(evalPrevia){
+    [...EVAL_CRITERIA,...EVAL_CRITERIA_PROD,...EVAL_CRITERIA_CUENTA].forEach(cr=>{
+      const el=document.getElementById('crit-'+cr.id);
+      if(el&&evalPrevia[cr.id]!==undefined) el.value=evalPrevia[cr.id];
+    });
+    document.getElementById('eval-fortalezas').value=evalPrevia.fortalezas||'';
+    document.getElementById('eval-mejoras').value=evalPrevia.mejoras||'';
+    document.getElementById('eval-plan').value=evalPrevia.plan||'';
+    updateScorePreview();
+  }
+  document.getElementById('mon-step3').style.display='block';
+  document.getElementById('mon-step3').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function monitorVolverLista(){
+  document.getElementById('mon-step3').style.display='none';
+  document.getElementById('mon-step2').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function buildEvalCriteria(){
+  renderCriteriaGroup('eval-criteria-trans',EVAL_CRITERIA);
+  renderCriteriaGroup('eval-criteria-prod',EVAL_CRITERIA_PROD);
+  renderCriteriaGroup('eval-criteria-cuenta',EVAL_CRITERIA_CUENTA);
+  updateScorePreview();
+}
+function renderCriteriaGroup(id,criteria){
+  document.getElementById(id).innerHTML=criteria.map(cr=>`
+    <div class="eval-score-row">
+      <div class="eval-criterion">${cr.label}<span>${cr.desc}</span></div>
+      <select class="eval-select" id="crit-${cr.id}" onchange="updateScorePreview()">
+        <option value="" disabled selected>—</option>
+        ${cr.opts.map(o=>`<option value="${o.v}">${o.l}</option>`).join('')}
+      </select>
+    </div>`).join('');
+}
+function updateScorePreview(){
+  const all=[...EVAL_CRITERIA,...EVAL_CRITERIA_PROD,...EVAL_CRITERIA_CUENTA];
+  let total=0;
+  all.forEach(cr=>{const el=document.getElementById('crit-'+cr.id);if(el&&el.value!=='')total+=parseFloat(el.value)||0;});
+  document.getElementById('eval-score-preview').innerHTML=`${total} <span>/ 100</span>`;
+  document.getElementById('eval-status-preview').textContent='Estado: '+calcStarStatus(total).label;
+}
+async function guardarEvaluacion(){
+  if(!monitorModeloActual){setStatus('monitor-eval-status','Selecciona primero una modelo','error');return;}
+  const cedula=String(monitorModeloActual.documento);
+  const periodo=monitorPeriodoActual;
+  const all=[...EVAL_CRITERIA,...EVAL_CRITERIA_PROD,...EVAL_CRITERIA_CUENTA];
+  const scores={};let total=0;
+  for(const cr of all){
+    const el=document.getElementById('crit-'+cr.id);
+    if(!el||el.value===''){setStatus('monitor-eval-status','Completa todos los criterios','error');return;}
+    scores[cr.id]=parseFloat(el.value);total+=scores[cr.id];
+  }
+  const nueva={fecha:new Date().toLocaleDateString('es-CO'),periodo,cedula,monitor_id:monitorSession.id,monitor_nombre:monitorSession.nombre,puntaje_total:total,...scores,
+    fortalezas:document.getElementById('eval-fortalezas').value.trim(),
+    mejoras:document.getElementById('eval-mejoras').value.trim(),
+    plan:document.getElementById('eval-plan').value.trim()};
+  showSpinner('Guardando evaluación...');
+  try{
+    const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'saveEval',...nueva})});
+    const d=await r.json();
+    hideSpinner();
+    if(d.status!=='ok'){setStatus('monitor-eval-status','Error al guardar: '+(d.msg||''),'error');return;}
+  }catch(e){hideSpinner();setStatus('monitor-eval-status','Error de conexión al guardar','error');return;}
+  // Espejo local
+  const idx=sessionEvals.findIndex(e=>e.cedula===cedula&&e.periodo===periodo);
+  if(idx>=0) sessionEvals[idx]=nueva; else sessionEvals.push(nueva);
+  // También actualizar mirror DB.evaluaciones
+  const idxDB=DB.evaluaciones.findIndex(e=>e.cedula===cedula&&e.periodo===periodo);
+  if(idxDB>=0) DB.evaluaciones[idxDB]=nueva; else DB.evaluaciones.push(nueva);
+  setStatus('monitor-eval-status','✓ Evaluación guardada en Google Sheets · '+total+' pts · '+calcStarStatus(total).label,'success');
+  onMonitorPeriodoChange();
+  renderAdminEvaluaciones();renderAdminDashboard();
+}
+function loadMonitorHistorial(){
+  if(!monitorSession)return;
+  const todosEvals=[...DB.evaluaciones,...sessionEvals].filter(e=>e.monitor_id===monitorSession.id);
+  const el=document.getElementById('monitor-hist-content');
+  if(!todosEvals.length){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Aún no hay evaluaciones registradas por ti.</div>';return;}
+  // Agrupar por cédula para vista por modelo
+  const byModelo={};
+  todosEvals.forEach(e=>{
+    if(!byModelo[e.cedula])byModelo[e.cedula]=[];
+    byModelo[e.cedula].push(e);
+  });
+  let html=`<div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">${Object.keys(byModelo).length} modelo(s) evaluada(s) · ${todosEvals.length} evaluaciones totales</div>`;
+  Object.entries(byModelo).forEach(([ced,evals])=>{
+    const desp=DB.comprobantes.find(c=>c.documento===ced);
+    const nombre=desp?.nombre||ced;
+    const inicial=nombre.charAt(0).toUpperCase();
+    const last=evals[evals.length-1];
+    const lastScore=parseFloat(last.puntaje_total)||0;
+    const st=calcStarStatus(lastScore);
+    const evo=calcEvo(evals);
+    const evolTexto=evo?(evo.diff>0?`↑ +${evo.diff}`:`↓ ${evo.diff}`):' ';
+    const evolColor=evo?(evo.diff>1?'var(--green)':evo.diff<-1?'var(--red)':' var(--text-muted)'):'var(--text-muted)';
+    const uid='mhist-'+ced;
+    html+=`<div class="modelo-eval-card">
+      <div class="mec-header" onclick="toggleMEC('${uid}')">
+        <div class="mec-avatar">${inicial}</div>
+        <div class="mec-info">
+          <div class="mec-nombre">${nombre}</div>
+          <div class="mec-sub">CC: ${ced} · ${evals.length} evaluacion${evals.length!==1?'es':''} · <span style="color:${evolColor}">${evolTexto} pts</span></div>
+        </div>
+        <div class="mec-score">${lastScore}</div>
+        <span class="score-status ${st.cls}" style="font-size:10px;padding:3px 10px;">${st.label}</span>
+        <span class="mec-chevron" id="chev-${uid}">›</span>
+      </div>
+      <div class="mec-body" id="${uid}">
+        <div style="font-size:10px;color:var(--gold-dim);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin-bottom:10px;">Historial de períodos</div>
+        ${[...evals].reverse().map(e=>{
+          const s=calcStarStatus(parseFloat(e.puntaje_total)||0);
+          const miniCrits=CRITERIOS.map(c=>{const pts=parseFloat(e[c.key])||0;const pct=Math.round((pts/c.max)*100);return`<div class="mini-bar-item"><div class="mini-bar-name">${c.label} ${pts}/${c.max}</div><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${pct}%"></div></div></div>`;}).join('');
+          return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text);">${e.periodo||'—'}</div>
+                <div style="font-size:10px;color:var(--text-muted);">${e.fecha||''}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="score-status ${s.cls}" style="font-size:10px;padding:2px 8px;">${s.label}</span>
+                <span style="font-family:'DM Serif Display',serif;font-size:20px;color:var(--gold-light);">${parseFloat(e.puntaje_total)||0}</span>
+              </div>
+            </div>
+            <div class="mini-bars">${miniCrits}</div>
+            ${e.fortalezas?`<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">💪 ${e.fortalezas.split('\n')[0]}</div>`:''}
+            ${e.mejoras?`<div style="margin-top:3px;font-size:11px;color:var(--text-muted);">🎯 ${e.mejoras.split('\n')[0]}</div>`:''}
+            <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:7px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <div id="ia-mh-${ced}-${(e.periodo||'').replace(/[^a-zA-Z0-9]/g,'')}" style="flex:1;min-width:120px;"></div>
+              <button class="btn-mini" style="font-size:10px;border-color:rgba(201,168,76,.3);color:var(--gold);"
+                onclick="generarAnalisisIA({cedula:'${ced}',periodo:'${e.periodo||''}',puntaje_total:${parseFloat(e.puntaje_total)||0},uso_celular:${e.uso_celular||0},presencia_camara:${e.presencia_camara||0},sensualidad:${e.sensualidad||0},performance:${e.performance||0},horas_conectadas:${e.horas_conectadas||0},facturacion:${e.facturacion||0},contenido_nuevo:${e.contenido_nuevo||0},respuesta_usuarios:${e.respuesta_usuarios||0}},'ia-mh-${ced}-${(e.periodo||'').replace(/[^a-zA-Z0-9]/g,'')}')">✦ IA</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════
+// ADMINISTRACIÓN
+// ══════════════════════════════════════════════════
+function initAdminOverlay(){
+  if(sessionStorage.getItem('stardom_admin_auth')==='1'){
+    document.getElementById('admin-pw-overlay').style.display='none';
+    document.getElementById('admin-main').style.display='block';
+    cargarDatosAdmin();
+  } else {
+    document.getElementById('admin-pw-overlay').style.display='flex';
+    document.getElementById('admin-main').style.display='none';
+  }
+}
+function checkAdminPw(){
+  if(document.getElementById('adminPwInput').value===ADMIN_PASSWORD){
+    document.getElementById('admin-pw-overlay').style.display='none';
+    document.getElementById('admin-main').style.display='block';
+    sessionStorage.setItem('stardom_admin_auth','1');
+    cargarDatosAdmin();
+  } else {
+    const err=document.getElementById('adminPwError');err.classList.add('show');
+    document.getElementById('adminPwInput').value='';
+    setTimeout(()=>err.classList.remove('show'),2500);
+  }
+}
+async function cargarDatosAdmin(){
+  if(!SCRIPT_URL){ renderAdminEvaluaciones(); renderAdminMonitores(); renderAdminDashboard(); return; }
+  showSpinner('Cargando datos...');
+  try{
+    // Cargar evaluaciones y monitores en paralelo
+    const [rEvals, rMons] = await Promise.all([
+      fetch(apiUrl('action=getEvals')),
+      fetch(apiUrl('action=getMonitores'))
+    ]);
+    const dEvals = await rEvals.json();
+    const dMons  = await rMons.json();
+    if(dEvals.status==='ok' && dEvals.data) DB.evaluaciones = [...dEvals.data, ...sessionEvals];
+    if(dMons.status==='ok'  && dMons.data)  DB.monitores    = [...dMons.data, ...sessionMonitores];
+  }catch(e){ console.warn('Error cargando datos admin:', e); }
+  hideSpinner();
+  renderAdminEvaluaciones(); renderAdminMonitores(); renderAdminDashboard();
+}
+function adminTab(tab,btn){
+  document.querySelectorAll('#admin-main-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+  ['atab-nomina','atab-evaluaciones','atab-monitores','atab-dashboard'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.classList.remove('active');
+  });
+  btn.classList.add('active');
+  const el=document.getElementById('atab-'+tab);if(el)el.classList.add('active');
+}
+
+// ── Admin dropdowns para comprobantes ──
+function onAdminPeriodoChange(){
+  const periodo = document.getElementById('admin-periodo-select').value;
+  const modeloSel = document.getElementById('admin-modelo-select');
+  if(modeloSel){
+    modeloSel.innerHTML = '<option value="">— Todas las modelos —</option>';
+    allSlipsData.forEach(s => {
+      const el = document.getElementById(s.id);
+      if(!periodo || (el && el.dataset.periodo === periodo)){
+        const opt = document.createElement('option');
+        opt.value = s.id; opt.textContent = s.name;
+        modeloSel.appendChild(opt);
+      }
+    });
+  }
+  filtrarComprobantesAdmin();
+}
+function onAdminModeloChange(){
+  filtrarComprobantesAdmin();
+}
+function filtrarComprobantesAdmin(){
+  const periodo  = document.getElementById('admin-periodo-select').value;
+  const modeloId = document.getElementById('admin-modelo-select').value;
+  document.querySelectorAll('#admin-slips-container .slip').forEach(sl => {
+    const slPeriodo = sl.dataset.periodo || '';
+    const matchPeriodo = !periodo || (slPeriodo === periodo);
+    const matchModelo  = !modeloId || (sl.id === modeloId);
+    sl.style.display = (matchPeriodo && matchModelo) ? 'block' : 'none';
+  });
+}
+
+// ── Nómina ──
+function handleFile(num,input){
+  const file=input.files[0];if(!file)return;
+  document.getElementById('name'+num).textContent=file.name;
+  document.getElementById('card'+num).classList.add('loaded');
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'array'});
+    const sheet=wb.Sheets[wb.SheetNames[0]];
+    const json=XLSX.utils.sheet_to_json(sheet,{defval:''});
+    if(num===1)data1=json.map(r=>({...r,_doc:String(r['# Doc Modelo']||r['Nro Documento']||'').trim()})).filter(r=>r._doc);
+    else data2=json.map(r=>({...r,_doc:String(r['Model ID']||r['Identificación']||'').trim()})).filter(r=>r._doc);
+    if(data1&&data2){document.getElementById('btnGenerate').disabled=false;setStatus('admin-nomina-status','✓ Archivos listos.','success');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function fmt(v){return(v===undefined||v===null||v==='')?'—':String(v).trim()||'—';}
+function getVal(row,...keys){for(const k of keys){const f=Object.keys(row).find(rk=>rk.trim().toLowerCase()===k.toLowerCase());if(f!==undefined&&row[f]!==''&&row[f]!==undefined)return row[f];}return'';}
+
+function generate(){
+  if(!data1||!data2)return;
+  const periodo=document.getElementById('periodoInput').value.trim()||'Sin período';
+  const nicksByDoc={};data2.forEach(r=>{if(!nicksByDoc[r._doc])nicksByDoc[r._doc]=[];nicksByDoc[r._doc].push(r);});
+  const modelos=data1.map(row=>{
+    const doc=row._doc;if(!doc)return null;
+    const nicks=nicksByDoc[doc]||[];
+    const nombre=(()=>{const n=fmt(getVal(row,'Razón Social (Nombre)'));const a=fmt(getVal(row,'Razón Social (Apellido)'));return(n!=='—'&&a!=='—')?(n+' '+a).trim():fmt(getVal(row,'Modelo'));})();
+    return{
+      documento:doc,id_modelo:fmt(getVal(row,'ID Modelo')),nombre,telefono:fmt(getVal(row,'Teléfono para Pago')),
+      total_usd:parseFloat(getVal(row,'Total','Valor USD'))||0,porcentaje:fmt(getVal(row,'Porcentaje')),
+      trm:parseFloat(getVal(nicks[0]||{},'Bonos (USD)'))||0,
+      pago_cop:parseFloat(getVal(row,'Pago al % COP'))||0,bonos_usd:parseFloat(getVal(row,'Bonificaciones (USD)'))||0,
+      descuentos_cop:parseFloat(getVal(row,'Descuentos (COP)'))||0,eps_cop:parseFloat(getVal(row,'EPS (COP)'))||0,
+      retencion:parseFloat(getVal(row,'Retención'))||0,
+      neto_pagar:(()=>{const ap=parseFloat(getVal(row,'A pagar'));const pag=parseFloat(getVal(row,'Pago al % COP'));return(ap&&ap>0)?ap:(pag||0);})(),
+      banco:fmt(getVal(row,'Banco')),nro_cuenta:fmt(getVal(row,'Nro Cuenta')),
+      tipo_cuenta:getVal(row,'Tipo Cuenta')==1?'Ahorros':getVal(row,'Tipo Cuenta')==2?'Corriente':fmt(getVal(row,'Tipo Cuenta')),
+      observaciones:'',periodo,
+      plataformas:nicks.map(nr=>({plat:fmt(getVal(nr,'Sede')),nick:fmt(getVal(nr,'Modelo')),usd:parseFloat(getVal(nr,'Tokens'))||0}))
+    };
+  }).filter(Boolean);
+  renderSlipsGrid(modelos, periodo);
+  // Guardar en Google Sheets
+  if(SCRIPT_URL){
+    showSpinner('Guardando en Google Sheets...');
+    fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'save',periodo,modelos})})
+      .then(r=>r.json())
+      .then(d=>{
+        hideSpinner();
+        if(d.status==='ok') setStatus('admin-nomina-status','✓ '+modelos.length+' comprobantes generados y guardados en Google Sheets.','success');
+        else setStatus('admin-nomina-status','Generados pero error al guardar: '+(d.msg||''),'error');
+      }).catch(()=>{ hideSpinner(); setStatus('admin-nomina-status','Generados. Sin conexión a Sheets.','error'); });
+  }
+}
+
+// loadDemoSlips no disponible en versión de producción
+
+function renderSlipsGrid(modelos, periodo){
+  allSlipsData = [];
+  const container = document.getElementById('admin-slips-container');
+  container.innerHTML = '';
+
+  modelos.forEach(m => {
+    const slipId = 'slip-' + m.documento + '-' + (m.periodo||periodo).replace(/[^a-zA-Z0-9]/g,'');
+    const safeName = (m.nombre||'').replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g,'').trim();
+    allSlipsData.push({id:slipId, name:safeName, telefono:m.telefono});
+    // Ensure periodo is set on model object
+    const mConPeriodo = {...m, periodo: m.periodo||periodo};
+    container.innerHTML += buildSlipHTML(mConPeriodo, slipId, true);
+  });
+
+  document.getElementById('admin-results-title').textContent = modelos.length + ' Comprobantes · ' + periodo;
+  document.getElementById('admin-results-section').style.display = 'block';
+
+  // Poblar dropdowns de filtro
+  const adminPerSel = document.getElementById('admin-periodo-select');
+  const modeloSel   = document.getElementById('admin-modelo-select');
+  if(adminPerSel){
+    const periodos = getPeriodosUnicos();
+    // Add current periodo if not in DB yet (from Excel)
+    if(periodo && !periodos.includes(periodo)) periodos.unshift(periodo);
+    adminPerSel.innerHTML = '<option value="">— Todos los períodos —</option>';
+    periodos.forEach((p,i) => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = p + (i===0?' (último)':'');
+      if(p===periodo) opt.selected = true;
+      adminPerSel.appendChild(opt);
+    });
+  }
+  if(modeloSel){
+    modeloSel.innerHTML = '<option value="">— Todas las modelos —</option>';
+    allSlipsData.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id; opt.textContent = s.name;
+      modeloSel.appendChild(opt);
+    });
+  }
+  // Show all by default (no filter on first render)
+  document.querySelectorAll('#admin-slips-container .slip').forEach(sl => sl.style.display = 'block');
+  document.getElementById('admin-results-section').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function slipToCanvas(id){
+  const el=document.getElementById(id);
+  const btns=el.querySelectorAll('.footer-btns,.obs-area');
+  btns.forEach(b=>b.style.visibility='hidden');
+  const c=await html2canvas(el,{backgroundColor:'#1a1815',scale:2,useCORS:true,logging:false});
+  btns.forEach(b=>b.style.visibility='visible');
+  return c;
+}
+async function downloadAdminSlip(id){
+  const el=document.getElementById(id);const name=el.dataset.name||'comprobante';
+  showSpinner('Generando imagen...');
+  try{const c=await slipToCanvas(id);const a=document.createElement('a');a.download=name+'.png';a.href=c.toDataURL('image/png');a.click();}
+  finally{hideSpinner();}
+}
+async function downloadAllSlips(){
+  showSpinner('Descargando todos...');
+  for(let i=0;i<allSlipsData.length;i++){
+    const s=allSlipsData[i];
+    document.getElementById('spinnerMsg').textContent=`${i+1}/${allSlipsData.length}: ${s.name}`;
+    try{const c=await slipToCanvas(s.id);const a=document.createElement('a');a.download=s.name+'.png';a.href=c.toDataURL('image/png');a.click();await new Promise(r=>setTimeout(r,400));}
+    catch(e){console.error(e);}
+  }
+  hideSpinner();setStatus('admin-nomina-status',`✓ ${allSlipsData.length} imágenes descargadas.`,'success');
+}
+async function sendWhatsApp(id){
+  const el=document.getElementById(id);let tel=(el.dataset.telefono||'').replace(/[\s\-\(\)]/g,'');
+  if(tel.startsWith('3')&&tel.length===10)tel='57'+tel;else if(tel.startsWith('+'))tel=tel.replace('+','');
+  if(!tel||tel==='—'){alert('Sin teléfono registrado.');return;}
+  showSpinner('Preparando...');
+  try{
+    const c=await slipToCanvas(id);
+    const a=document.createElement('a');a.download=(el.dataset.name||'comprobante')+'.png';a.href=c.toDataURL('image/png');a.click();
+    await new Promise(r=>setTimeout(r,600));
+    window.open(`https://wa.me/${tel}?text=${encodeURIComponent('Hola, te comparto tu comprobante de ingreso de esta semana. Revisa el archivo adjunto.')}`);
+  }finally{hideSpinner();}
+}
+
+// ── Seguimiento por modelo ──
+function renderAdminEvaluaciones(){
+  const allEvals=[...DB.evaluaciones,...sessionEvals];
+  const el=document.getElementById('admin-eval-content');
+  const alertsEl=document.getElementById('admin-eval-alerts');
+
+  // Poblar filtro de períodos en el select
+  const segSel=document.getElementById('seg-periodo-filter');
+  if(segSel){
+    const periodos=getPeriodosUnicos();
+    const current=segSel.value;
+    segSel.innerHTML='<option value="">Todos los períodos</option>';
+    periodos.forEach(p=>{const opt=document.createElement('option');opt.value=p;opt.textContent=p;if(p===current)opt.selected=true;segSel.appendChild(opt);});
+  }
+  const periodoFiltro=segSel?segSel.value:'';
+
+  // Alertas: modelos con comprobante en último período sin evaluación
+  if(alertsEl){
+    const ultimoPeriodo=getPeriodosUnicos()[0];
+    if(ultimoPeriodo){
+      const modelosUltimo=DB.comprobantes.filter(c=>c.periodo===ultimoPeriodo);
+      const evalsUltimo=allEvals.filter(e=>e.periodo===ultimoPeriodo);
+      const evaluadasSet=new Set(evalsUltimo.map(e=>e.cedula));
+      const sinEvaluar=modelosUltimo.filter(m=>!evaluadasSet.has(m.documento));
+      if(sinEvaluar.length){
+        alertsEl.innerHTML=`<div style="background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.2);border-radius:10px;padding:12px 16px;margin-bottom:4px;">
+          <div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">⚠ Sin evaluar en "${ultimoPeriodo}"</div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;">${sinEvaluar.map(m=>`<span style="background:rgba(224,82,82,.12);border:1px solid rgba(224,82,82,.25);color:var(--red);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:500;">● ${m.nombre}</span>`).join('')}</div>
+        </div>`;
+      } else {
+        alertsEl.innerHTML=`<div style="background:rgba(111,207,151,.06);border:1px solid rgba(111,207,151,.18);border-radius:10px;padding:10px 16px;margin-bottom:4px;font-size:12px;color:var(--green);">✓ Todas las modelos del período "${ultimoPeriodo}" han sido evaluadas</div>`;
+      }
+    } else { alertsEl.innerHTML=''; }
+  }
+
+  if(!allEvals.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Sin evaluaciones registradas aún.</div>';return;}
+
+  const evalsFiltradas=periodoFiltro?allEvals.filter(e=>e.periodo===periodoFiltro):allEvals;
+  if(!evalsFiltradas.length){el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Sin evaluaciones para "${periodoFiltro}".</div>`;return;}
+
+  const byCedula={};
+  evalsFiltradas.forEach(e=>{if(!byCedula[e.cedula])byCedula[e.cedula]=[];byCedula[e.cedula].push(e);});
+  let html='';
+  Object.entries(byCedula).forEach(([ced,evals])=>{
+    const desp=DB.comprobantes.find(d=>d.documento===ced);
+    const nombre=desp?.nombre||ced;
+    const inicial=nombre.charAt(0).toUpperCase();
+    const last=evals[evals.length-1];
+    const lastScore=parseFloat(last.puntaje_total)||0;
+    const st=calcStarStatus(lastScore);
+    const evo=calcEvo(evals);
+    const evolTexto=evo?(evo.diff>0?`↑ +${evo.diff} pts`:`↓ ${evo.diff} pts`):'1er período';
+    const evolColor=evo?(evo.diff>1?'var(--green)':evo.diff<-1?'var(--red)':'var(--text-muted)'):'var(--text-muted)';
+    const uid='mec-'+ced;
+    html+=`<div class="modelo-eval-card">
+      <div class="mec-header" onclick="toggleMEC('${uid}')">
+        <div class="mec-avatar">${inicial}</div>
+        <div class="mec-info">
+          <div class="mec-nombre">${nombre}</div>
+          <div class="mec-sub">CC: ${ced} · ${evals.length} eval${evals.length!==1?'s':''} · <span style="color:${evolColor};font-size:10px;">${evolTexto}</span></div>
+        </div>
+        <div class="mec-score">${lastScore}</div>
+        <span class="score-status ${st.cls}" style="font-size:10px;padding:3px 10px;">${st.label}</span>
+        <span class="mec-chevron" id="chev-${uid}">›</span>
+      </div>
+      <div class="mec-body" id="${uid}">
+        <div class="section-label" style="margin-bottom:10px;">Historial completo</div>
+        ${[...evals].reverse().map(e=>{
+          const s=calcStarStatus(parseFloat(e.puntaje_total)||0);
+          const allM=[...DB.monitores,...sessionMonitores];
+          const monData=allM.find(m=>m.monitor_id===e.monitor_id);
+          const monNombre=monData?monData.nombre:(e.monitor_nombre||e.monitor_id||'—');
+          return`<div class="mec-periodo-row">
+            <div>
+              <div class="mec-periodo-label">${e.periodo}</div>
+              <div style="font-size:10px;color:var(--text-dim);margin-top:1px;">${e.fecha||''} · <span style="color:var(--blue);">👤 ${monNombre}</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="score-status ${s.cls}" style="font-size:10px;padding:2px 8px;">${s.label}</span>
+              <span class="mec-periodo-score">${parseFloat(e.puntaje_total)||0}</span>
+            </div>
+          </div>`;}).join('')}
+        <div class="section-label" style="margin-top:14px;margin-bottom:8px;">Detalle · Último período evaluado</div>
+        <div class="mini-bars">
+          ${CRITERIOS.map(c=>{const pts=parseFloat(last[c.key])||0;const pct=Math.round((pts/c.max)*100);return`<div class="mini-bar-item"><div class="mini-bar-name">${c.label} ${pts}/${c.max}</div><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${pct}%"></div></div></div>`;}).join('')}
+        </div>
+        ${last.fortalezas?`<div style="margin-top:12px;padding:7px 10px;background:rgba(111,207,151,.05);border-left:2px solid var(--green);border-radius:0 6px 6px 0;font-size:11px;color:var(--text-muted);">💪 ${last.fortalezas.split('\n')[0]}</div>`:''}
+        ${last.mejoras?`<div style="margin-top:6px;padding:7px 10px;background:rgba(224,82,82,.04);border-left:2px solid var(--red);border-radius:0 6px 6px 0;font-size:11px;color:var(--text-muted);">🎯 ${last.mejoras.split('\n')[0]}</div>`:''}
+        <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div id="ia-seg-${uid}" style="flex:1;min-width:160px;"></div>
+          <button class="btn-mini" style="white-space:nowrap;border-color:rgba(201,168,76,.3);color:var(--gold);"
+            onclick="generarAnalisisIA({cedula:'${ced}',periodo:'${last.periodo||String(ced)}',puntaje_total:${lastScore},uso_celular:${last.uso_celular||0},presencia_camara:${last.presencia_camara||0},sensualidad:${last.sensualidad||0},performance:${last.performance||0},horas_conectadas:${last.horas_conectadas||0},facturacion:${last.facturacion||0},contenido_nuevo:${last.contenido_nuevo||0},respuesta_usuarios:${last.respuesta_usuarios||0}},'ia-seg-${uid}')">✦ Análisis IA</button>
+        </div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+function toggleMEC(uid){
+  const body=document.getElementById(uid);
+  const chev=document.getElementById('chev-'+uid);
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+// ── Monitores admin ──
+function registrarMonitor(){
+  const id=document.getElementById('nuevo-monitor-id').value.trim().toUpperCase();
+  const nombre=document.getElementById('nuevo-monitor-nombre').value.trim();
+  const pw=document.getElementById('nuevo-monitor-pw').value.trim();
+  if(!id||!nombre||!pw){setStatus('admin-monitor-status','Completa todos los campos','error');return;}
+  const allMon=[...DB.monitores,...sessionMonitores];
+  if(allMon.some(m=>m.monitor_id===id)){setStatus('admin-monitor-status','Ya existe un monitor con ese ID','error');return;}
+  showSpinner('Registrando monitor...');
+  try{
+    const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'saveMonitor',monitorId:id,nombre,password:pw})});
+    const d=await r.json();
+    hideSpinner();
+    if(d.status!=='ok'){setStatus('admin-monitor-status','Error: '+(d.msg||''),'error');return;}
+  }catch(e){hideSpinner();setStatus('admin-monitor-status','Error de conexión','error');return;}
+  sessionMonitores.push({fecha:new Date().toLocaleDateString('es-CO'),monitor_id:id,nombre,password:pw});
+  DB.monitores.push({fecha:new Date().toLocaleDateString('es-CO'),monitor_id:id,nombre,password:pw});
+  setStatus('admin-monitor-status','✓ Monitor registrado en Google Sheets','success');
+  document.getElementById('nuevo-monitor-id').value='';document.getElementById('nuevo-monitor-nombre').value='';document.getElementById('nuevo-monitor-pw').value='';
+  renderAdminMonitores();
+}
+function renderAdminMonitores(){
+  const allMon=[...DB.monitores,...sessionMonitores];
+  const el=document.getElementById('admin-monitores-list');
+  el.innerHTML=`<table class="monitor-table">
+    <thead><tr>
+      <th>ID</th><th>Nombre</th><th>Contraseña</th><th>Registrado</th><th>Acciones</th>
+    </tr></thead>
+    <tbody>${allMon.map((m,i)=>`<tr>
+      <td style="color:var(--gold);font-weight:600;">${m.monitor_id}</td>
+      <td>${m.nombre}</td>
+      <td><span class="pw-visible" id="pw-txt-${i}">${m.password}</span></td>
+      <td style="color:var(--text-muted)">${m.fecha||'—'}</td>
+      <td>
+        <div style="display:flex;gap:5px;align-items:center;">
+          <input class="edit-pw-input" id="pw-inp-${i}" type="text" value="${m.password}" placeholder="Nueva contraseña" style="display:none"/>
+          <button class="btn-mini" id="pw-edit-btn-${i}" onclick="toggleEditPw(${i})">✏ Editar</button>
+          <button class="btn-mini save" id="pw-save-btn-${i}" onclick="guardarPwMonitor(${i},'${m.monitor_id}')" style="display:none">✓ Guardar</button>
+        </div>
+      </td>
+    </tr>`).join('')}</tbody></table>`;
+}
+function toggleEditPw(i){
+  const txt=document.getElementById('pw-txt-'+i);
+  const inp=document.getElementById('pw-inp-'+i);
+  const editBtn=document.getElementById('pw-edit-btn-'+i);
+  const saveBtn=document.getElementById('pw-save-btn-'+i);
+  const showing=inp.style.display!=='none';
+  txt.style.display=showing?'inline':'none';
+  inp.style.display=showing?'none':'inline-block';
+  editBtn.textContent=showing?'✏ Editar':'Cancelar';
+  saveBtn.style.display=showing?'none':'inline-block';
+  if(!showing) inp.focus();
+}
+function guardarPwMonitor(i,monitorId){
+  const inp=document.getElementById('pw-inp-'+i);
+  const newPw=inp.value.trim();
+  if(!newPw){alert('La contraseña no puede estar vacía');return;}
+  // Actualizar en DB o session
+  const enDB=DB.monitores.find(m=>m.monitor_id===monitorId);
+  if(enDB) enDB.password=newPw;
+  const enSes=sessionMonitores.find(m=>m.monitor_id===monitorId);
+  if(enSes) enSes.password=newPw;
+  renderAdminMonitores();
+  setStatus('admin-monitor-status',`✓ Contraseña de ${monitorId} actualizada`,'success');
+}
+
+// ── Dashboard admin ──
+function renderAdminDashboard(){
+  const allEvals=[...DB.evaluaciones,...sessionEvals];
+  const el=document.getElementById('dashboard-content');
+  if(!allEvals.length){el.innerHTML='<div class="card" style="text-align:center;padding:36px;color:var(--text-muted);">Sin datos de evaluaciones.</div>';return;}
+  const byCedula={};
+  allEvals.forEach(e=>{if(!byCedula[e.cedula])byCedula[e.cedula]=[];byCedula[e.cedula].push(e);});
+  const ranking=Object.entries(byCedula).map(([ced,evals])=>{
+    const last=evals[evals.length-1];
+    const desp=DB.comprobantes.find(d=>d.documento===ced);
+    return{cedula:ced,nombre:desp?.nombre||ced,puntaje_total:parseFloat(last.puntaje_total)||0,evals};
+  }).sort((a,b)=>b.puntaje_total-a.puntaje_total);
+  const total=allEvals.length;
+  const promedio=(allEvals.reduce((s,e)=>s+(parseFloat(e.puntaje_total)||0),0)/total).toFixed(1);
+  const con_mejora=ranking.filter(r=>r.puntaje_total>=70).length;
+  const alertas=[];
+  ranking.forEach(m=>{
+    if(m.puntaje_total>=90)alertas.push({tipo:'green',mensaje:`${m.nombre}: Elite — ${m.puntaje_total} pts 🌟`});
+    if(m.puntaje_total<60)alertas.push({tipo:'red',mensaje:`${m.nombre}: Puntaje en riesgo (${m.puntaje_total} pts)`});
+    if(m.evals.length>=3){
+      const l3=m.evals.slice(-3).map(e=>parseFloat(e.puntaje_total)||0);
+      if(l3[2]<l3[1]&&l3[1]<l3[0])alertas.push({tipo:'red',mensaje:`${m.nombre}: Tendencia descendente 3 períodos 📉`});
+      if(l3[2]>l3[1]&&l3[1]>l3[0])alertas.push({tipo:'green',mensaje:`${m.nombre}: Crecimiento constante 3 períodos 📈`});
+    }
+  });
+  el.innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="s-val">${Object.keys(byCedula).length}</div><div class="s-lbl">Modelos evaluadas</div></div>
+      <div class="stat-card"><div class="s-val">${promedio}</div><div class="s-lbl">Puntaje promedio</div></div>
+      <div class="stat-card"><div class="s-val">${total}</div><div class="s-lbl">Evaluaciones totales</div></div>
+      <div class="stat-card"><div class="s-val">${con_mejora}</div><div class="s-lbl">En Bueno o mejor</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex-wrap:wrap;">
+      <div class="card">
+        <div class="section-label">Ranking General</div>
+        ${ranking.map((m,i)=>`<div class="ranking-item">
+          <div class="rank-num">${i+1}</div>
+          <div class="rank-info"><div class="rank-name">${m.nombre}</div><div class="rank-sub">CC: ${m.cedula}</div></div>
+          <div class="rank-score">${m.puntaje_total}</div>
+        </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="section-label">Alertas automáticas</div>
+        ${alertas.length?alertas.map(a=>`<div class="alert-item ${a.tipo}">
+          <span>${a.tipo==='red'?'🔴':'🟢'}</span><span>${a.mensaje}</span>
+        </div>`).join(''):'<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:14px;">Sin alertas activas.</div>'}
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════
+// IA — Análisis automático de evaluación
+// ══════════════════════════════════════════════════
+async function generarAnalisisIA(evalData, containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  el.innerHTML = '<span style="color:var(--text-dim);font-size:11px;font-style:italic;">Generando análisis IA...</span>';
+
+  const allEv = [...DB.evaluaciones, ...sessionEvals].filter(e => String(e.cedula) === String(evalData.cedula));
+  const historial = allEv.map(e => e.periodo + ': ' + e.puntaje_total + 'pts').join(' → ') || 'primer período';
+  const desp = DB.comprobantes.find(c => String(c.documento) === String(evalData.cedula));
+  const nombreModelo = desp ? desp.nombre.split(' ')[0] : 'La modelo';
+
+  const criteriosTexto = [
+    'Celular ' + (evalData.uso_celular||0) + '/10',
+    'Cámara ' + (evalData.presencia_camara||0) + '/10',
+    'Sensualidad ' + (evalData.sensualidad||0) + '/10',
+    'Performance ' + (evalData.performance||0) + '/10',
+    'Horas ' + (evalData.horas_conectadas||0) + '/15',
+    'Facturación ' + (evalData.facturacion||0) + '/20',
+    'Contenido ' + (evalData.contenido_nuevo||0) + '/10',
+    'Usuarios ' + (evalData.respuesta_usuarios||0) + '/15'
+  ].join(', ');
+
+  const prompt = 'Eres analista de una agencia de modelos. Escribe exactamente 2 líneas muy cortas sobre ' + nombreModelo + ' en el período ' + evalData.periodo + ' (puntaje: ' + evalData.puntaje_total + '/100). Criterios: ' + criteriosTexto + '. Historial: ' + historial + '. RESPONDE SOLO CON 2 LÍNEAS: la primera empieza con 💪 (logro o fortaleza, máximo 10 palabras), la segunda empieza con 🎯 (área a mejorar, máximo 10 palabras). Sin texto adicional.';
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 150,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const texto = (data && data.content && data.content[0] && data.content[0].text) ? data.content[0].text.trim() : '';
+    if(texto){
+      const lineas = texto.split('\n').filter(l => l.trim().length > 0 && (l.includes('💪') || l.includes('🎯')));
+      if(lineas.length > 0){
+        el.innerHTML = lineas.map(l => '<div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;line-height:1.5;">' + l.trim() + '</div>').join('');
+      } else {
+        // Fallback: show all non-empty lines
+        const allLines = texto.split('\n').filter(l => l.trim());
+        el.innerHTML = allLines.slice(0,2).map(l => '<div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">' + l.trim() + '</div>').join('');
+      }
+    } else {
+      el.innerHTML = '<span style="color:var(--text-dim);font-size:11px;">Sin respuesta disponible</span>';
+    }
+  } catch(err){
+    el.innerHTML = '<span style="color:var(--text-dim);font-size:11px;">Sin conexión a IA</span>';
+  }
+}
+</script>
+</body>
+</html>
